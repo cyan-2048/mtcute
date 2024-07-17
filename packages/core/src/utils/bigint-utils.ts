@@ -1,16 +1,11 @@
-import { bufferToReversed } from './buffer-utils.js'
 import { ICryptoProvider } from './crypto/abstract.js'
+import bigInt, { BigInteger } from 'big-integer'
 
 /**
  * Get the minimum number of bits required to represent a number
  */
-export function bigIntBitLength(n: bigint) {
-    // not the fastest way, but at least not .toString(2) and not too complex
-    // taken from: https://stackoverflow.com/a/76616288/22656950
-
-    const i = (n.toString(16).length - 1) * 4
-
-    return i + 32 - Math.clz32(Number(n >> BigInt(i)))
+export function bigIntBitLength(n: BigInteger) {
+    return n.bitLength().toJSNumber()
 }
 
 /**
@@ -20,38 +15,24 @@ export function bigIntBitLength(n: bigint) {
  * @param length  Length of the resulting buffer (by default it's the minimum required)
  * @param le  Whether to use little-endian encoding
  */
-export function bigIntToBuffer(value: bigint, length = 0, le = false): Uint8Array {
-    const bits = bigIntBitLength(value)
-    const bytes = Math.ceil(bits / 8)
+export function bigIntToBuffer(value: BigInteger, length = 0, le = false): Uint8Array {
+    const array = value.toArray(256).value
 
-    if (length !== 0 && bytes > length) {
+    if (length !== 0 && array.length > length) {
         throw new Error('Value out of bounds')
     }
 
-    if (length === 0) length = bytes
-
-    const buf = new ArrayBuffer(length)
-    const u8 = new Uint8Array(buf)
-
-    const unaligned = length % 8
-    const dv = new DataView(buf, 0, length - unaligned)
-
-    // it is faster to work with 64-bit words than with bytes directly
-    for (let i = 0; i < dv.byteLength; i += 8) {
-        dv.setBigUint64(i, value & 0xffffffffffffffffn, true)
-        value >>= 64n
+    if (length !== 0) {
+        // padding
+        while (array.length !== length) array.unshift(0)
     }
 
-    if (unaligned > 0) {
-        for (let i = length - unaligned; i < length; i++) {
-            u8[i] = Number(value & 0xffn)
-            value >>= 8n
-        }
-    }
+    if (le) array.reverse()
 
-    if (!le) u8.reverse()
+    const buffer = new Uint8Array(length || array.length)
+    buffer.set(array, 0)
 
-    return u8
+    return buffer
 }
 
 /**
@@ -60,33 +41,21 @@ export function bigIntToBuffer(value: bigint, length = 0, le = false): Uint8Arra
  * @param buffer  Buffer to convert
  * @param le  Whether to use little-endian encoding
  */
-export function bufferToBigInt(buffer: Uint8Array, le = false): bigint {
-    if (le) buffer = bufferToReversed(buffer)
+export function bufferToBigInt(buffer: Uint8Array, le = false): BigInteger {
+    const offset = 0
+    const length = buffer.length
+    const arr = [...buffer.subarray(offset, offset + length)]
 
-    const unaligned = buffer.length % 8
-    const dv = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength - unaligned)
+    if (le) arr.reverse()
 
-    let res = 0n
-
-    // it is faster to work with 64-bit words than with bytes directly
-    for (let i = 0; i < dv.byteLength; i += 8) {
-        res = (res << 64n) | BigInt(dv.getBigUint64(i, false))
-    }
-
-    if (unaligned > 0) {
-        for (let i = buffer.length - unaligned; i < buffer.length; i++) {
-            res = (res << 8n) | BigInt(buffer[i])
-        }
-    }
-
-    return res
+    return bigInt.fromArray(arr as unknown as number[], 256)
 }
 
 /**
  * Generate a cryptographically safe random big integer of the given size (in bytes)
  * @param size  Size in bytes
  */
-export function randomBigInt(crypto: ICryptoProvider, size: number): bigint {
+export function randomBigInt(crypto: ICryptoProvider, size: number): BigInteger {
     return bufferToBigInt(crypto.randomBytes(size))
 }
 
@@ -94,14 +63,14 @@ export function randomBigInt(crypto: ICryptoProvider, size: number): bigint {
  * Generate a random big integer of the given size (in bits)
  * @param bits
  */
-export function randomBigIntBits(crypto: ICryptoProvider, bits: number): bigint {
+export function randomBigIntBits(crypto: ICryptoProvider, bits: number): BigInteger {
     let num = randomBigInt(crypto, Math.ceil(bits / 8))
 
     const bitLength = bigIntBitLength(num)
 
     if (bitLength > bits) {
         const toTrim = bitLength - bits
-        num >>= BigInt(toTrim)
+        num = num.shiftRight(toTrim)
     }
 
     return num
@@ -113,89 +82,64 @@ export function randomBigIntBits(crypto: ICryptoProvider, bits: number): bigint 
  * @param max  Maximum value (exclusive)
  * @param min  Minimum value (inclusive)
  */
-export function randomBigIntInRange(crypto: ICryptoProvider, max: bigint, min = 1n): bigint {
-    const interval = max - min
-    if (interval < 0n) throw new Error('expected min < max')
+export function randomBigIntInRange(crypto: ICryptoProvider, max: BigInteger, min = bigInt.one): BigInteger {
+    const interval = max.minus(min)
+    if (interval.isNegative()) throw new Error('expected min < max')
 
     const byteSize = Math.ceil(bigIntBitLength(interval) / 8)
 
     let result = randomBigInt(crypto, byteSize)
-    while (result > interval) result -= interval
+    while (result.gt(interval)) result = result.minus(interval)
 
-    return min + result
+    return min.plus(result)
 }
 
 /**
  * Compute the multiplicity of 2 in the prime factorization of n
  * @param n
  */
-export function twoMultiplicity(n: bigint): bigint {
-    if (n === 0n) return 0n
+export function twoMultiplicity(n: BigInteger): BigInteger {
+    if (n.equals(bigInt.zero)) return bigInt.zero
 
-    let m = 0n
-    let pow = 1n
+    let m = bigInt.zero
+    let pow = bigInt.one
 
     while (true) {
-        if ((n & pow) !== 0n) return m
-        m += 1n
-        pow <<= 1n
+        if (!n.and(pow).isZero()) return m
+        m = m.plus(bigInt.one)
+        pow = pow.shiftLeft(1)
     }
 }
 
-export function bigIntMin(a: bigint, b: bigint): bigint {
-    return a < b ? a : b
+export function bigIntMin(a: BigInteger, b: BigInteger): BigInteger {
+    return bigInt.min(a, b)
 }
 
-export function bigIntAbs(a: bigint): bigint {
-    return a < 0n ? -a : a
+export function bigIntAbs(a: BigInteger): BigInteger {
+    return a.abs()
 }
 
-export function bigIntGcd(a: bigint, b: bigint): bigint {
-    // using euclidean algorithm is fast enough on smaller numbers
-    // https://en.wikipedia.org/wiki/Euclidean_algorithm#Implementations
-
-    while (b !== 0n) {
-        const t = b
-        b = a % b
-        a = t
-    }
-
-    return a
+export function bigIntGcd(a: BigInteger, b: BigInteger): BigInteger {
+    return bigInt.gcd(a, b)
 }
 
-export function bigIntModPow(base: bigint, exp: bigint, mod: bigint): bigint {
-    // using the binary method is good enough for our use case
-    // https://en.wikipedia.org/wiki/Modular_exponentiation#Right-to-left_binary_method
-
-    base %= mod
-
-    let result = 1n
-
-    while (exp > 0n) {
-        if (exp % 2n === 1n) {
-            result = (result * base) % mod
-        }
-
-        exp >>= 1n
-        base = base ** 2n % mod
-    }
-
-    return result
+export function bigIntModPow(base: BigInteger, exp: BigInteger, mod: BigInteger): BigInteger {
+    return base.modPow(exp, mod)
 }
 
 // below code is based on https://github.com/juanelas/bigint-mod-arith, MIT license
 
-function eGcd(a: bigint, b: bigint): [bigint, bigint, bigint] {
-    let x = 0n
-    let y = 1n
-    let u = 1n
-    let v = 0n
+function eGcd(a: BigInteger, b: BigInteger): [BigInteger, BigInteger, BigInteger] {
+    let x = bigInt.zero // 0n
+    let y = bigInt.one // 1n
+    let u = bigInt.one // 1n
+    let v = bigInt.zero // 0n
 
-    while (a !== 0n) {
-        const q = b / a
-        const r: bigint = b % a
-        const m = x - u * q
-        const n = y - v * q
+    while (a.neq(bigInt.zero)) {
+        const q = b.divide(a)
+        const r: BigInteger = b.mod(a)
+        const m = x.minus(u.times(q))
+        const n = y.minus(v.times(q)) // y - v * q
         b = a
         a = r
         x = u
@@ -207,23 +151,25 @@ function eGcd(a: bigint, b: bigint): [bigint, bigint, bigint] {
     return [b, x, y]
 }
 
-function toZn(a: number | bigint, n: number | bigint): bigint {
-    if (typeof a === 'number') a = BigInt(a)
-    if (typeof n === 'number') n = BigInt(n)
+function toZn(a: number | BigInteger, n: number | BigInteger): BigInteger {
+    if (typeof a === 'number') a = bigInt(a)
+    if (typeof n === 'number') n = bigInt(n)
 
-    if (n <= 0n) {
+    if (
+        n.leq(bigInt.zero) // n <= 0n
+    ) {
         throw new RangeError('n must be > 0')
     }
 
-    const aZn = a % n
+    const aZn = a.mod(n)
 
-    return aZn < 0n ? aZn + n : aZn
+    return aZn.lt(bigInt.zero) ? aZn.add(n) : aZn
 }
 
-export function bigIntModInv(a: bigint, n: bigint): bigint {
+export function bigIntModInv(a: BigInteger, n: BigInteger): BigInteger {
     const [g, x] = eGcd(toZn(a, n), n)
 
-    if (g !== 1n) {
+    if (g.neq(bigInt.one)) {
         throw new RangeError(`${a.toString()} does not have inverse modulo ${n.toString()}`) // modular inverse does not exist
     } else {
         return toZn(x, n)

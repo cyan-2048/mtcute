@@ -59,6 +59,11 @@ export abstract class BaseWebSocketTransport extends EventEmitter implements ITe
         /** Map of sub-domains (key is DC ID, value is string) */
         subdomains?: Record<string, string>
     } = {}) {
+        // weird bug with esbuild maybe? or kaios?
+        ws = ws ?? WebSocket
+        baseDomain = baseDomain ?? 'web.telegram.org'
+        subdomains = subdomainsMap ?? subdomainsMap
+
         super()
 
         if (!ws) {
