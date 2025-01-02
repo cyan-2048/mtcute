@@ -1,7 +1,7 @@
 import type { ICryptoProvider } from './abstract.js'
 
 import { BigInteger } from '@modern-dev/jsbn'
-import { fromBytes, fromInt, geq, leq, lt, min2, randomBigIntInRange, toBytes } from '../bigint-utils.js'
+import { fromBytes, fromInt, geq, leq, lt, randomBigIntInRange, toBytes } from '../bigint-utils.js'
 
 const TWO = fromInt(2)
 
@@ -54,7 +54,7 @@ function PollardRhoBrent(crypto: ICryptoProvider, n: BigInteger): BigInteger {
         while (lt(k, r) && g.equals(BigInteger.ONE)) {
             ys = y
 
-            for (let i = fromInt(0); lt(i, min2(m, r.subtract(k))); i = i.add(BigInteger.ONE)) {
+            for (let i = fromInt(0); lt(i, m.min(r.subtract(k))); i = i.add(BigInteger.ONE)) {
                 y = y.multiply(y).mod(n).add(c).mod(n)
                 q = q.multiply(x.subtract(y).abs()).mod(n)
                 // y = (y * y % n + c) % n

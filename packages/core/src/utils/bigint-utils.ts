@@ -1,13 +1,11 @@
 /* eslint-disable style/max-len */
 import type { ICryptoProvider } from './crypto/abstract.js'
+import { u8 } from '@fuman/utils'
 
 import { BigInteger } from '@modern-dev/jsbn'
 
 /**
  * a < b
- * @param a
- * @param b
- * @returns
  */
 export function lt(a: BigInteger, b: BigInteger): boolean {
     return a.compareTo(b) < 0
@@ -15,9 +13,6 @@ export function lt(a: BigInteger, b: BigInteger): boolean {
 
 /**
  * a > b
- * @param a
- * @param b
- * @returns
  */
 export function gt(a: BigInteger, b: BigInteger): boolean {
     return a.compareTo(b) > 0
@@ -25,9 +20,6 @@ export function gt(a: BigInteger, b: BigInteger): boolean {
 
 /**
  * a <= b
- * @param a
- * @param b
- * @returns
  */
 export function leq(a: BigInteger, b: BigInteger): boolean {
     return a.compareTo(b) <= 0
@@ -35,9 +27,6 @@ export function leq(a: BigInteger, b: BigInteger): boolean {
 
 /**
  * a >= b
- * @param a
- * @param b
- * @returns
  */
 export function geq(a: BigInteger, b: BigInteger): boolean {
     return a.compareTo(b) >= 0
@@ -55,8 +44,6 @@ export function fromInt(n: number): BigInteger {
 
 /**
  * Helper function to quickly create a BigInteger from a radix string
- * @param n
- * @param radix
  */
 export function fromRadix(n: string, radix: number): BigInteger {
     const bi = new BigInteger(null)
@@ -64,42 +51,8 @@ export function fromRadix(n: string, radix: number): BigInteger {
     return bi
 }
 
-export function bitLength(n: BigInteger): number {
-    return n.bitLength()
-}
-
-/**
- * polyfill for DataView.getBigUint64
- * @param dataView
- * @param byteOffset
- * @param littleEndian
- * @returns
- */
-export function getBigUint64(
-    dataView: DataView,
-    byteOffset: number,
-    littleEndian: boolean | undefined,
-): BigInteger {
-    const a = dataView.getUint32(byteOffset, littleEndian)
-
-    const b = dataView.getUint32(byteOffset + 4, littleEndian)
-
-    const littleEndianMask = Number(!!littleEndian)
-
-    const bigEndianMask = Number(!littleEndian)
-
-    // This branch-less optimization is 77x faster than normal ternary operator.
-
-    // and only 3% slower than native implementation
-
-    // https://jsbench.me/p8kyhg1eqv/1
-
-    return (fromInt(a * bigEndianMask + b * littleEndianMask).shiftLeft(32)).or(fromInt(a * littleEndianMask + b * bigEndianMask))
-}
-
 /**
  * Compute the multiplicity of 2 in the prime factorization of n
- * @param n
  */
 export function twoMultiplicity(n: BigInteger): BigInteger {
     if (n.equals(BigInteger.ZERO)) return fromInt(0)
@@ -117,40 +70,21 @@ export function twoMultiplicity(n: BigInteger): BigInteger {
     }
 }
 
-/**
- * Reverse a buffer (or a part of it) into a new buffer
- */
-export function bufferToReversed(buf: Uint8Array, start = 0, end: number = buf.length): Uint8Array {
-    const len = end - start
-    const ret = new Uint8Array(len)
-
-    for (let i = 0; i < len; i++) {
-        ret[i] = buf[end - i - 1]
-    }
-
-    return ret
-}
-
 export function fromBytes(buffer: Uint8Array, le = false): BigInteger {
-    if (le) buffer = bufferToReversed(buffer)
+    if (le) buffer = u8.toReversed(buffer)
 
-    const unaligned = buffer.length % 8
-    const dv = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength - unaligned)
+    // empty
+    const bn = new BigInteger(null)
 
-    let res = fromInt(0)
+    // yes you read that right
+    // in the source code
+    // when b is set to 256
+    // it will loop through an array of numbers
+    // it doesn't use any Array methods
+    // therefore, TypedArrays should work fine
+    bn.fromString(buffer as any, 256, false)
 
-    // it is faster to work with 64-bit words than with bytes directly
-    for (let i = 0; i < dv.byteLength; i += 8) {
-        res = (res.shiftLeft(64)).or(getBigUint64(dv, i, false))
-    }
-
-    if (unaligned > 0) {
-        for (let i = buffer.length - unaligned; i < buffer.length; i++) {
-            res = ((res.shiftLeft(8)).or(fromInt(buffer[i])))
-        }
-    }
-
-    return res
+    return bn
 }
 
 /**
@@ -195,7 +129,7 @@ export function randomBigInt(crypto: ICryptoProvider, size: number): BigInteger 
 export function randomBigIntBits(crypto: ICryptoProvider, bits: number): BigInteger {
     const num = randomBigInt(crypto, Math.ceil(bits / 8))
 
-    const _bitLength = bitLength(num)
+    const _bitLength = num.bitLength()
 
     if (_bitLength > bits) {
         const toTrim = _bitLength - bits
@@ -213,30 +147,23 @@ export function randomBigIntBits(crypto: ICryptoProvider, bits: number): BigInte
  * @param max  Maximum value (exclusive)
  * @param min  Minimum value (inclusive)
  */
-export function randomBigIntInRange(crypto: ICryptoProvider, max: BigInteger, min: BigInteger = fromInt(0)): BigInteger {
+export function randomBigIntInRange(
+    crypto: ICryptoProvider,
+    max: BigInteger,
+    min: BigInteger = fromInt(0),
+): BigInteger {
     const interval = max.subtract(min)
     // if (interval < 0n) throw new Error('expected min < max')
-    if (interval.compareTo(BigInteger.ZERO) < 0) throw new Error('expected min < max')
+    if (lt(interval, BigInteger.ZERO)) throw new Error('expected min < max')
 
-    const byteSize = Math.ceil(bitLength(interval) / 8)
+    const byteSize = Math.ceil(interval.bitLength() / 8)
 
     const result = randomBigInt(crypto, byteSize)
-    while (result.compareTo(interval) > 0) {
-        // r = r - a
+
+    while (gt(result, interval)) {
+        // result = result - interval
         result.subTo(interval, result)
     }
 
     return min.add(result)
-}
-
-export function min2(a: BigInteger, b: BigInteger): BigInteger {
-    return a.min(b)
-}
-
-export function max2(a: BigInteger, b: BigInteger): BigInteger {
-    return a.max(b)
-}
-
-export function abs(a: BigInteger): BigInteger {
-    return a.abs()
 }

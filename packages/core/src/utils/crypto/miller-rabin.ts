@@ -1,7 +1,7 @@
 import type { ICryptoProvider } from './abstract.js'
 
 import { BigInteger } from '@modern-dev/jsbn'
-import { bitLength, fromInt, geq, gt, leq, lt, randomBigIntBits, twoMultiplicity } from '../bigint-utils.js'
+import { fromInt, geq, gt, leq, lt, randomBigIntBits, twoMultiplicity } from '../bigint-utils.js'
 
 const TWO = fromInt(2)
 
@@ -10,7 +10,7 @@ export function millerRabin(crypto: ICryptoProvider, n: BigInteger, rounds = 20)
     if (lt(n, fromInt(4))) return gt(n, BigInteger.ONE)
     if (n.isEven() || lt(n, BigInteger.ZERO)) return false
 
-    const nBits = bitLength(n)
+    const nBits = n.bitLength()
     const nSub = n.subtract(BigInteger.ONE)
 
     const r = twoMultiplicity(nSub)
