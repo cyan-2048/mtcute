@@ -98,7 +98,9 @@ export function toBytes(value: BigInteger, length = 0, le = false): Uint8Array {
     const array = value.toByteArray(false)
 
     if (length !== 0 && array.length > length) {
-        throw new Error('Value out of bounds')
+        // weird? could this be a bug?
+        if (array[0] === 0) array.shift()
+        else throw new Error('Value out of bounds')
     }
 
     if (length !== 0) {
