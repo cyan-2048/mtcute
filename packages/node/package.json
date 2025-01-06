@@ -1,7 +1,7 @@
 {
     "name": "@mtcute/node",
     "type": "module",
-    "version": "0.19.1",
+    "version": "0.19.3",
     "private": true,
     "description": "Meta-package for Node.js",
     "author": "alina sireneva <alina@tei.su>",
@@ -18,8 +18,8 @@
         "@mtcute/markdown-parser": "workspace:^",
         "@mtcute/wasm": "workspace:^",
         "@fuman/utils": "0.0.4",
-        "@fuman/net": "0.0.4",
-        "@fuman/node": "0.0.4",
+        "@fuman/net": "0.0.9",
+        "@fuman/node": "0.0.9",
         "better-sqlite3": "11.3.0"
     },
     "devDependencies": {
