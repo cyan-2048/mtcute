@@ -9,7 +9,7 @@ export class WebCryptoProvider implements ICryptoProvider {
 
     async initialize(): Promise<void> {
         // eslint-disable-next-line eqeqeq
-        const isKai3 = import.meta.env.VITE_KAIOS == 3
+        const isKai3 = import.meta.env.KAIOS == 3
 
         if (isKai3) {
             const m = await import('./wasm/crypto.js')

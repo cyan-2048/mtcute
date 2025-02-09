@@ -1,9 +1,10 @@
+/* eslint-disable ts/ban-ts-comment */
 import type {
     IAesCtr,
     ICryptoProvider,
     IEncryptionScheme,
 } from '@mtcute/core/utils.js'
-// @ts-expect-error: kaigram uses a modified version of fflate, only having gzipSync and gunzipSync
+// @ts-ignore: kaigram uses a modified version of fflate, only having gzipSync and gunzipSync
 // eslint-disable-next-line import/extensions
 import { gunzipSync, gzipSync } from '@/lib/fflate'
 
@@ -35,16 +36,14 @@ function getAvailableMemory() {
 
 async function loadAsm() {
     if (import.meta.env.DEV) {
-        // thanks commonjs plugin lmao
-        // eslint-disable-next-line ts/no-require-imports, no-restricted-globals
-        const factory = require('./mtcute.asm.js')
+        const { factory } = await import('./mtcute.asm.dev')
         asm = await factory({
             locateFile() {
                 return MtcuteMemURL
             },
         })
     } else {
-        // @ts-expect-error: system.js only found in kaigram
+        // @ts-ignore: system.js only found in kaigram
         const factory = (await System.import(MtcuteAsmURL)).default
 
         asm = await factory({
@@ -286,7 +285,7 @@ interface WebpDecoded {
 export class AsmCryptoProvider extends BaseCryptoProvider implements ICryptoProvider {
     readonly crypto: Crypto
 
-    factorizePQ(pq: Uint8Array): [Uint8Array, Uint8Array] {
+    override factorizePQ(pq: Uint8Array): [Uint8Array, Uint8Array] {
         // return factorizePQSync(this, pq);
         return webogramFactorizePQSync(this, pq)
     }
