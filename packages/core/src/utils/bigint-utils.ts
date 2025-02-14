@@ -38,6 +38,18 @@ export function geq(a: BigInteger, b: BigInteger): boolean {
  */
 export function fromInt(n: number): BigInteger {
     const bi = new BigInteger(null)
+
+    // this property will be missing if being replaced with native impl
+    const DV = bi.DV
+    if (DV) {
+        if (!(-DV <= n && n < DV)) {
+            // if it is outside the range we will use fromRadix
+            bi.fromRadix(n.toString(16), 16)
+            // console.error("bigint out of bounds ", bi.bitLength());
+            return bi
+        }
+    }
+
     bi.fromInt(n)
     return bi
 }
