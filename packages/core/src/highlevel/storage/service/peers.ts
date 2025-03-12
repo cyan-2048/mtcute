@@ -270,13 +270,13 @@ export class PeersService extends BaseService {
         const cached = this._cache.get(id)
         if (cached) return cached.peer
 
-        const dto = await this._peers.getById(id, false)
+        const dto = await this._peers.getById(id)
 
-        if (dto) {
+        if (dto && !dto.isMin) {
             return this._returnCaching(id, dto)
         }
 
-        if (allowRefs) {
+        if ((!dto || dto.isMin) && allowRefs) {
             const ref = await this._refs.getForPeer(id)
             if (!ref) return null
 
@@ -307,7 +307,7 @@ export class PeersService extends BaseService {
     }
 
     async getMinAccessHash(id: number): Promise<tl.Long | null> {
-        const dto = await this._peers.getById(id, true)
+        const dto = await this._peers.getById(id)
         if (!dto) return null
 
         return longFromFastString(dto.accessHash)
@@ -336,8 +336,9 @@ export class PeersService extends BaseService {
         const cached = this._cache.get(id)
         if (cached) return cached.complete
 
-        const dto = await this._peers.getById(id, allowMin)
+        const dto = await this._peers.getById(id)
         if (!dto) return null
+        if (!allowMin && dto.isMin) return null
 
         const cacheItem: CacheItem = {
             peer: getInputPeer(dto),

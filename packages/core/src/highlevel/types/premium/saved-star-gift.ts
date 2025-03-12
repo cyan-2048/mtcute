@@ -29,6 +29,11 @@ export class SavedStarGift {
         return this.raw.refunded!
     }
 
+    /** Whether this gift is pinned to the top of the list */
+    get pinned(): boolean {
+        return this.raw.pinnedToTop!
+    }
+
     /** Whether this gift can be upgraded to a unique gift */
     get canUpgrade(): boolean {
         return this.raw.canUpgrade!
@@ -91,8 +96,3 @@ export class SavedStarGift {
 
 makeInspectable(SavedStarGift)
 memoizeGetters(SavedStarGift, ['sender', 'gift'])
-
-export {
-    /** @deprecated alias for {@link SavedStarGift} */
-    SavedStarGift as UserStarGift,
-}

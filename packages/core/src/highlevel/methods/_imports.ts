@@ -81,6 +81,7 @@ import {
     ParsedUpdate,
     Peer,
     PeerReaction,
+    PeerSettings,
     PeersIndex,
     PeerStories,
     Photo,
@@ -112,9 +113,9 @@ import {
     UploadedFile,
     UploadFileLike,
     User,
-    UserStarGift,
     UserStatusUpdate,
     UserTypingUpdate,
+    WebPageMedia,
     WebviewResult,
 } from '../types/index.js'
 // @copy
