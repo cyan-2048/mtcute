@@ -36,7 +36,7 @@ const tg = new TelegramClient({
 })
 ```
 
-The updates themselves are dispatched on the client as events (see [reference](https://ref.mtcute.dev/classes/_mtcute_core.index.TelegramClient.html#on)):
+The updates themselves are dispatched on the client as events (see [reference](https://ref.mtcute.dev/classes/_mtcute_core.index.TelegramClient)):
 ```ts
 tg.onNewMessage.add((msg) => {
   console.log(msg.text)
@@ -138,7 +138,7 @@ a separate section. For now, let's just register a dispatcher and add a simple h
 
 ```ts
 const tg = new TelegramClient(...)
-const dp = new Dispatcher(tg)
+const dp = Dispatcher.for(tg)
 
 dp.onNewMessage(async (msg) => {
   await msg.forwardTo('me')

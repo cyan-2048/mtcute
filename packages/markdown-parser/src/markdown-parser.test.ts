@@ -531,13 +531,26 @@ describe('MarkdownMessageEntityParser', () => {
             test(md_`${'**plain**'}`, [], '**plain**')
         })
 
+        it('should handle strings at line breaks', () => {
+            test(md_`
+some text ${'meow'}
+some more ${'text'}
+meow
+`, [], 'some text meow\nsome more text\nmeow')
+            test(md_`
+some ${'text'}
+
+${'meowww'}
+`, [], 'some text\n\nmeowww')
+        })
+
         it('should handle numbers/Longs', () => {
             test(md_`${1234567890}`, [], '1234567890')
             test(md_`${Long.fromString('1234567890')}`, [], '1234567890')
         })
 
         it('should skip falsy values', () => {
-            test(md_`some text ${null} more text ${false}`, [], 'some text  more text ')
+            test(md_`some text ${null} more text ${false}`, [], 'some text  more text')
         })
 
         it('should properly dedent', () => {

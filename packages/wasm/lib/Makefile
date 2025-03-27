@@ -43,12 +43,15 @@ ifneq ($(OS),Windows_NT)
     endif
 endif
 
-OUT := ../mtcute.wasm
+OUT := ../src/mtcute.wasm
+OUT_SIMD := ../src/mtcute-simd.wasm
 
 $(OUT): $(SOURCES)
 	$(CC) $(CFLAGS) -I . -I utils -o $@ $^
+$(OUT_SIMD): $(SOURCES)
+	$(CC) $(CFLAGS) -msimd128 -I . -I utils -o $@ $^
 
 clean:
-	rm -f $(OUT)
+	rm -f $(OUT) $(OUT_SIMD)
 
-all: $(OUT)
+all: $(OUT) $(OUT_SIMD)
