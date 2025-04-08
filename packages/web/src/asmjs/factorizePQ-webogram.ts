@@ -2,7 +2,6 @@
 // this is based off of webogram's implementation of pqFactorization
 // fallback to mtcute if something fails(just like webogram)
 // i guess that should be a main occuring theme here? use leemon if something is terribly slow?
-// really hope this only applies to KaiOS 2.5
 
 import type { ICryptoProvider } from '../utils.js'
 
@@ -21,7 +20,6 @@ import {
     rightShift_,
     str2bigInt,
     sub_,
-    // @ts-expect-error: add leemon
 } from 'leemon'
 import { factorizePQSync, fromBytes } from '../utils.js'
 
