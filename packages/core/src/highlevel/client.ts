@@ -488,7 +488,8 @@ export interface TelegramClient extends ITelegramClient {
      *
      * **Available**: 👤 users only
      *
-     * @returns  An object containing information about the sent confirmation code
+     * @returns  An object containing information about the sent confirmation code,
+     *     or a user if the user was already logged in
      */
     sendCode(
         params: {
@@ -503,7 +504,7 @@ export interface TelegramClient extends ITelegramClient {
 
             /** Abort signal */
             abortSignal?: AbortSignal
-        }): Promise<SentCode>
+        }): Promise<SentCode | User>
     /**
      * Send a code to email needed to recover your password
      *
@@ -2305,7 +2306,8 @@ export interface TelegramClient extends ITelegramClient {
      *
      * @param peers  Peers for which to fetch dialogs.
      */
-    getPeerDialogs(peers: MaybeArray<InputPeerLike>): Promise<Dialog[]>
+    getPeerDialogs(
+        peers: MaybeArray<InputPeerLike>): Promise<(Dialog | null)[]>
     /**
      * Iterate over dialogs.
      *
@@ -2511,6 +2513,7 @@ export interface TelegramClient extends ITelegramClient {
         input: InputFileLike,
         params: {
             progressCallback?: (uploaded: number, total: number) => void
+            abortSignal?: AbortSignal
             fileName?: string
             fileSize?: number
             fileMime?: string
@@ -2525,6 +2528,7 @@ export interface TelegramClient extends ITelegramClient {
         media: InputMediaLike, params?: {
             progressCallback?: (uploaded: number, total: number) => void
             uploadPeer?: tl.TypeInputPeer
+            abortSignal?: AbortSignal
             businessConnectionId?: string
         }, uploadMedia?: boolean): Promise<tl.TypeInputMedia>
 
@@ -2609,6 +2613,8 @@ export interface TelegramClient extends ITelegramClient {
              * or throw an error if it cannot be guessed.
              */
             requireExtension?: boolean
+
+            abortSignal?: AbortSignal
         }): Promise<UploadedFile>
     /**
      * Upload a media to Telegram servers, without actually
