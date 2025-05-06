@@ -336,7 +336,7 @@ export async function doAuthorization(
         throw new Error('Step 3: invalid server nonce from server')
     }
 
-    const dhPrime = bigint.fromBytes(serverDhInner.dhPrime)
+    const dhPrime = fromBytes(serverDhInner.dhPrime)
     const timeOffset = serverDhInner.serverTime - Math.floor(performance.now() / 1000)
 
     session.updateTimeOffset(timeOffset)
