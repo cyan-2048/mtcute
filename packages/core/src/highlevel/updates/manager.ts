@@ -14,7 +14,7 @@ import {
     getBarePeerId,
     getMarkedPeerId,
     parseMarkedPeerId,
-    SortedLinkedList,
+    SortedArray,
     toggleChannelIdMark,
     toInputChannel,
 } from '../../utils/index.js'
@@ -85,6 +85,8 @@ import {
 //     return state.rpsProcessing.getRps()
 // }
 
+const WARN_EVERY = 100
+
 const KEEP_ALIVE_INTERVAL = 15 * 60 * 1000 // 15 minutes
 const UPDATES_TOO_LONG = { _: 'updatesTooLong' } as const
 
@@ -96,16 +98,20 @@ export class UpdatesManager {
     postponedTimer: EarlyTimer = new EarlyTimer()
     hasTimedoutPostponed = false
 
-    pendingUpdateContainers: SortedLinkedList<PendingUpdateContainer>
-        = new SortedLinkedList((a, b) => a.seqStart - b.seqStart)
+    pendingUpdateContainers: SortedArray<PendingUpdateContainer>
+        = new SortedArray<PendingUpdateContainer>([], (a, b) => a.seqStart - b.seqStart)
 
-    pendingPtsUpdates: SortedLinkedList<PendingUpdate> = new SortedLinkedList((a, b) => a.ptsBefore! - b.ptsBefore!)
-    pendingPtsUpdatesPostponed: SortedLinkedList<PendingUpdate>
-        = new SortedLinkedList((a, b) => a.ptsBefore! - b.ptsBefore!)
+    pendingPtsUpdates: SortedArray<PendingUpdate>
+        = new SortedArray<PendingUpdate>([], (a, b) => a.ptsBefore! - b.ptsBefore!)
 
-    pendingQtsUpdates: SortedLinkedList<PendingUpdate> = new SortedLinkedList((a, b) => a.qtsBefore! - b.qtsBefore!)
-    pendingQtsUpdatesPostponed: SortedLinkedList<PendingUpdate>
-        = new SortedLinkedList((a, b) => a.qtsBefore! - b.qtsBefore!)
+    pendingPtsUpdatesPostponed: SortedArray<PendingUpdate>
+        = new SortedArray<PendingUpdate>([], (a, b) => a.ptsBefore! - b.ptsBefore!)
+
+    pendingQtsUpdates: SortedArray<PendingUpdate>
+        = new SortedArray<PendingUpdate>([], (a, b) => a.qtsBefore! - b.qtsBefore!)
+
+    pendingQtsUpdatesPostponed: SortedArray<PendingUpdate>
+        = new SortedArray<PendingUpdate>([], (a, b) => a.qtsBefore! - b.qtsBefore!)
 
     pendingUnorderedUpdates: Deque<PendingUpdate> = new Deque()
 
@@ -312,7 +318,7 @@ export class UpdatesManager {
             case 'updateShortChatMessage':
             case 'updateShort':
             case 'updateShortSentMessage':
-                this.pendingUpdateContainers.add({
+                this.pendingUpdateContainers.insert({
                     upd: update,
                     seqStart: 0,
                     seqEnd: 0,
@@ -320,7 +326,7 @@ export class UpdatesManager {
                 break
             case 'updates':
             case 'updatesCombined':
-                this.pendingUpdateContainers.add({
+                this.pendingUpdateContainers.insert({
                     upd: update,
                     seqStart: update._ === 'updatesCombined' ? update.seqStart : update.seq,
                     seqEnd: update.seq,
@@ -328,6 +334,10 @@ export class UpdatesManager {
                 break
             default:
                 assertNever(update)
+        }
+
+        if (this.pendingUpdateContainers.length % WARN_EVERY === 0) {
+            this.log.warn('%d pending update containers, updatesLoopActive = %b. possible memory leak', this.pendingUpdateContainers.length, this.updatesLoopActive)
         }
 
         this.updatesLoopCv.notify()
@@ -1075,7 +1085,7 @@ export class UpdatesManager {
 
             if (parsed.channelId && parsed.ptsBefore) {
                 // we need to check pts for these updates, put into pts queue
-                pendingPtsUpdates.add(parsed)
+                pendingPtsUpdates.insert(parsed)
             } else {
                 // the updates are in order already, we can treat them as unordered
                 pendingUnorderedUpdates.pushBack(parsed)
@@ -1478,9 +1488,9 @@ export class UpdatesManager {
                                 const parsed = toPendingUpdate(update, peers)
 
                                 if (parsed.ptsBefore !== undefined) {
-                                    pendingPtsUpdates.add(parsed)
+                                    pendingPtsUpdates.insert(parsed)
                                 } else if (parsed.qtsBefore !== undefined) {
-                                    pendingQtsUpdates.add(parsed)
+                                    pendingQtsUpdates.insert(parsed)
                                 } else {
                                     pendingUnorderedUpdates.pushBack(parsed)
                                 }
@@ -1499,9 +1509,9 @@ export class UpdatesManager {
                             const parsed = toPendingUpdate(upd.update, new PeersIndex())
 
                             if (parsed.ptsBefore !== undefined) {
-                                pendingPtsUpdates.add(parsed)
+                                pendingPtsUpdates.insert(parsed)
                             } else if (parsed.qtsBefore !== undefined) {
-                                pendingQtsUpdates.add(parsed)
+                                pendingQtsUpdates.insert(parsed)
                             } else {
                                 pendingUnorderedUpdates.pushBack(parsed)
                             }
@@ -1547,7 +1557,7 @@ export class UpdatesManager {
                                 ptsCount: upd.ptsCount,
                             }
 
-                            pendingPtsUpdates.add({
+                            pendingPtsUpdates.insert({
                                 update,
                                 ptsBefore: upd.pts - upd.ptsCount,
                                 pts: upd.pts,
@@ -1591,7 +1601,7 @@ export class UpdatesManager {
                                 ptsCount: upd.ptsCount,
                             }
 
-                            pendingPtsUpdates.add({
+                            pendingPtsUpdates.insert({
                                 update,
                                 ptsBefore: upd.pts - upd.ptsCount,
                                 pts: upd.pts,
@@ -1671,7 +1681,7 @@ export class UpdatesManager {
                                     diff,
                                 )
                                 pending.timeout = performance.now() + 500
-                                pendingPtsUpdatesPostponed.add(pending)
+                                pendingPtsUpdatesPostponed.insert(pending)
                                 postponedTimer.emitBefore(pending.timeout)
                             } else if (diff > -1000000) {
                                 log.debug(
@@ -1716,9 +1726,8 @@ export class UpdatesManager {
 
                 this.log.debug('processing postponed pts-ordered updates')
 
-                for (let item = pendingPtsUpdatesPostponed._first; item; item = item.n) {
-                    // awesome fucking iteration because i'm so fucking tired and wanna kms
-                    const pending = item.v
+                for (let i = 0; i < pendingPtsUpdatesPostponed.raw.length; i++) {
+                    const pending = pendingPtsUpdatesPostponed.raw[i]
 
                     const upd = pending.update
 
@@ -1750,7 +1759,8 @@ export class UpdatesManager {
                             localPts,
                             pending.ptsBefore,
                         )
-                        pendingPtsUpdatesPostponed._remove(item)
+                        pendingPtsUpdatesPostponed.removeIndex(i)
+                        i--
                         continue
                     }
                     if (localPts < pending.ptsBefore!) {
@@ -1776,7 +1786,8 @@ export class UpdatesManager {
                                 localPts,
                                 pending.ptsBefore,
                             )
-                            pendingPtsUpdatesPostponed._remove(item)
+                            pendingPtsUpdatesPostponed.removeIndex(i)
+                            i--
 
                             if (pending.channelId) {
                                 this._fetchChannelDifferenceLater(requestedDiff, pending.channelId)
@@ -1788,7 +1799,8 @@ export class UpdatesManager {
                     }
 
                     await this._onUpdate(pending, requestedDiff, true)
-                    pendingPtsUpdatesPostponed._remove(item)
+                    pendingPtsUpdatesPostponed.removeIndex(i)
+                    i--
                 }
 
                 this.log.debug('processing pending qts-ordered updates')
@@ -1824,7 +1836,7 @@ export class UpdatesManager {
                                 diff,
                             )
                             pending.timeout = performance.now() + 500
-                            pendingQtsUpdatesPostponed.add(pending)
+                            pendingQtsUpdatesPostponed.insert(pending)
                             postponedTimer.emitBefore(pending.timeout)
                         } else {
                             log.debug(
@@ -1848,9 +1860,8 @@ export class UpdatesManager {
 
                 this.log.debug('processing postponed qts-ordered updates')
 
-                for (let item = pendingQtsUpdatesPostponed._first; item; item = item.n) {
-                    // awesome fucking iteration because i'm so fucking tired and wanna kms
-                    const pending = item.v
+                for (let i = 0; i < pendingQtsUpdatesPostponed.raw.length; i++) {
+                    const pending = pendingQtsUpdatesPostponed.raw[i]
                     const upd = pending.update
 
                     // check the pts to see if the gap was filled
@@ -1885,7 +1896,8 @@ export class UpdatesManager {
                                 this.qts!,
                                 pending.qtsBefore,
                             )
-                            pendingQtsUpdatesPostponed._remove(item)
+                            pendingQtsUpdatesPostponed.removeIndex(i)
+                            i--
                             this._fetchDifferenceLater(requestedDiff)
                         }
                         continue
@@ -1893,7 +1905,8 @@ export class UpdatesManager {
 
                     // gap was filled, and the update can be applied
                     await this._onUpdate(pending, requestedDiff, true)
-                    pendingQtsUpdatesPostponed._remove(item)
+                    pendingQtsUpdatesPostponed.removeIndex(i)
+                    i--
                 }
 
                 this.hasTimedoutPostponed = false
