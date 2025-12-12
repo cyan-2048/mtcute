@@ -83,6 +83,7 @@ export class IdbAuthKeysRepository implements IAuthKeysRepository {
 
     // IndexedDB sucks
     const tempOs = tx.objectStore(TABLE_TEMP_AUTH_KEYS)
+    // TODO: might break on KaiOS
     const keys = await reqToPromise<IDBValidKey[]>(tempOs.getAllKeys())
 
     for (const key of keys) {

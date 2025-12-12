@@ -1,7 +1,7 @@
 import type { TlPublicKey } from '@mtcute/tl/binary/rsa-keys.js'
-import type { ICryptoProvider, Logger } from '../utils/index.js'
 import type { SessionConnection } from './session-connection.js'
-import { bigint, typed, u8 } from '@fuman/utils'
+import { typed, u8 } from '@fuman/utils'
+import { BigInteger } from '@modern-dev/jsbn'
 import { mtp } from '@mtcute/tl'
 
 import { TlBinaryReader, TlBinaryWriter, TlSerializationCounter } from '@mtcute/tl-runtime'
@@ -11,28 +11,41 @@ import { findKeyByFingerprints } from '../utils/crypto/keys.js'
 import { millerRabin } from '../utils/crypto/miller-rabin.js'
 import { generateKeyAndIvFromNonce } from '../utils/crypto/mtproto.js'
 
+import { fromBytes, fromInt, fromRadix, geq, type ICryptoProvider, leq, type Logger, toBytes } from '../utils/index.js'
 import { mtpAssertTypeIs } from '../utils/type-assertions.js'
 
+// TODO: Might break on KaiOS (Major Refactor)
 // Heavily based on code from https://github.com/LonamiWebs/Telethon/blob/master/telethon/network/authenticator.py
 
+const TWO = fromInt(2)
+const THREE = fromInt(3)
+const FOUR = fromInt(4)
+const FIVE = fromInt(5)
+const SIX = fromInt(6)
+const SEVEN = fromInt(7)
+const EIGHT = fromInt(8)
+const NINETEEN = fromInt(19)
+const TWENTY_THREE = fromInt(23)
+const TWENTY_FOUR = fromInt(24)
+
 // see https://core.telegram.org/mtproto/security_guidelines
-// const DH_SAFETY_RANGE = bigInt[2].pow(2048 - 64)
-const DH_SAFETY_RANGE = 2n ** (2048n - 64n)
+const DH_SAFETY_RANGE = TWO.pow(2048 - 64)
+// const DH_SAFETY_RANGE = 2n ** (2048n - 64n)
 // eslint-disable-next-line style/max-len
-const KNOWN_DH_PRIME = 0xC71CAEB9C6B1C9048E6C522F70F13F73980D40238E3E21C14934D037563D930F48198A0AA7C14058229493D22530F4DBFA336F6E0AC925139543AED44CCE7C3720FD51F69458705AC68CD4FE6B6B13ABDC9746512969328454F18FAF8C595F642477FE96BB2A941D5BCD1D4AC8CC49880708FA9B378E3C4F3A9060BEE67CF9A4A4A695811051907E162753B56B0F6B410DBA74D8A84B2A14B3144E0EF1284754FD17ED950D5965B4B9DD46582DB1178D169C6BC465B0D6FF9CA3928FEF5B9AE4E418FC15E83EBEA0F87FA9FF5EED70050DED2849F47BF959D956850CE929851F0D8115F635B105EE2E4E15D04B2454BF6F4FADF034B10403119CD8E3B92FCC5Bn
-const TWO_POW_2047 = 2n ** 2047n
-const TWO_POW_2048 = 2n ** 2048n
+const KNOWN_DH_PRIME = fromRadix('C71CAEB9C6B1C9048E6C522F70F13F73980D40238E3E21C14934D037563D930F48198A0AA7C14058229493D22530F4DBFA336F6E0AC925139543AED44CCE7C3720FD51F69458705AC68CD4FE6B6B13ABDC9746512969328454F18FAF8C595F642477FE96BB2A941D5BCD1D4AC8CC49880708FA9B378E3C4F3A9060BEE67CF9A4A4A695811051907E162753B56B0F6B410DBA74D8A84B2A14B3144E0EF1284754FD17ED950D5965B4B9DD46582DB1178D169C6BC465B0D6FF9CA3928FEF5B9AE4E418FC15E83EBEA0F87FA9FF5EED70050DED2849F47BF959D956850CE929851F0D8115F635B105EE2E4E15D04B2454BF6F4FADF034B10403119CD8E3B92FCC5B', 16)
+const TWO_POW_2047 = TWO.pow(2047)
+const TWO_POW_2048 = TWO.pow(2048)
 
 interface CheckedPrime {
-  prime: bigint
-  generators: number[]
+    prime: BigInteger
+    generators: number[]
 }
 
 const checkedPrimesCache: CheckedPrime[] = []
 
-function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: bigint, g: number) {
-  if (KNOWN_DH_PRIME === dhPrime) {
-    log.debug('server is using known dh prime, skipping validation')
+function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: BigInteger, g: number) {
+    if (KNOWN_DH_PRIME.equals(dhPrime)) {
+        log.debug('server is using known dh prime, skipping validation')
 
     return
   }
@@ -121,8 +134,8 @@ function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: bigint, g: 
 function rsaPad(data: Uint8Array, crypto: ICryptoProvider, key: TlPublicKey): Uint8Array {
   // since Summer 2021, they use "version of RSA with a variant of OAEP+ padding explained below"
 
-  const keyModulus = BigInt(`0x${key.modulus}`)
-  const keyExponent = BigInt(`0x${key.exponent}`)
+    const keyModulus = fromRadix(key.modulus, 16)
+    const keyExponent = fromRadix(key.exponent, 16)
 
   if (data.length > 144) {
     throw new MtArgumentError('Failed to pad: too big data')

@@ -1,8 +1,9 @@
+import type { BigInteger } from '@modern-dev/jsbn'
 import type { ICorePlatform } from '../types/platform.js'
+
 import { hex } from '@fuman/utils'
 
 import { tl } from '@mtcute/tl'
-
 import { isTlRpcError } from './type-assertions.js'
 
 const DEFAULT_LOG_LEVEL = 2
@@ -46,49 +47,46 @@ export class Logger {
       obj = obj.parent
     }
 
-    return s
-  }
+    log(level: number, fmt: string, ...args: unknown[]): void {
+        if (level > this.mgr.level) return
+        if (!this.mgr['_filter'](this.tag)) return
 
-  log(level: number, fmt: string, ...args: unknown[]): void {
-    if (level > this.mgr.level) return
-    if (!this.mgr['_filter'](this.tag)) return
+        // custom formatters
+        if (
+            fmt.includes('%h')
+            || fmt.includes('%b')
+            || fmt.includes('%j')
+            || fmt.includes('%J')
+            || fmt.includes('%l')
+            || fmt.includes('%L')
+            || fmt.includes('%e')
+        ) {
+            let idx = 0
+            fmt = fmt.replace(FORMATTER_RE, (m) => {
+                if (m === '%h' || m === '%b' || m === '%j' || m === '%J' || m === '%l' || m === '%L' || m === '%e') {
+                    let val = args[idx]
 
-    // custom formatters
-    if (
-      fmt.includes('%h')
-      || fmt.includes('%b')
-      || fmt.includes('%j')
-      || fmt.includes('%J')
-      || fmt.includes('%l')
-      || fmt.includes('%L')
-      || fmt.includes('%e')
-    ) {
-      let idx = 0
-      fmt = fmt.replace(FORMATTER_RE, (m) => {
-        if (m === '%h' || m === '%b' || m === '%j' || m === '%J' || m === '%l' || m === '%L' || m === '%e') {
-          let val = args[idx]
+                    args.splice(idx, 1)
 
-          args.splice(idx, 1)
+                    if (m === '%h') {
+                        if (ArrayBuffer.isView(val)) return hex.encode(val as Uint8Array)
+                        if (typeof val === 'number' || typeof val === 'bigint' || (typeof val == 'object' && (typeof (val as BigInteger).intValue) === 'function' && (typeof (val as BigInteger).millerRabin) === 'function')) return (val as any).toString(16)
 
-          if (m === '%h') {
-            if (ArrayBuffer.isView(val)) return hex.encode(val as Uint8Array)
-            if (typeof val === 'number' || typeof val === 'bigint') return val.toString(16)
+                        return String(val)
+                    }
+                    if (m === '%b') return String(Boolean(val))
 
-            return String(val)
-          }
-          if (m === '%b') return String(Boolean(val))
+                    if (m === '%j' || m === '%J') {
+                        if (m === '%J') {
+                            val = [...(val as IterableIterator<unknown>)]
+                        }
 
-          if (m === '%j' || m === '%J') {
-            if (m === '%J') {
-              val = [...(val as IterableIterator<unknown>)]
-            }
-
-            return JSON.stringify(val, (k, v) => {
-              if (
-                ArrayBuffer.isView(v)
-                || (typeof v === 'object' && v.type === 'Buffer' && Array.isArray(v.data)) // todo: how can we do this better?
-              ) {
-                // eslint-disable-next-line
+                        return JSON.stringify(val, (k, v) => {
+                            if (
+                                ArrayBuffer.isView(v)
+                                || (typeof v === 'object' && v.type === 'Buffer' && Array.isArray(v.data)) // todo: how can we do this better?
+                            ) {
+                                // eslint-disable-next-line
                                 let str = v.data ? Buffer.from(v.data as number[]).toString('hex') : hex.encode(v)
 
                 if (str.length > 300) {

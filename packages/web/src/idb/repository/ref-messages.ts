@@ -72,6 +72,7 @@ export class IdbRefMsgRepository implements IReferenceMessagesRepository {
 
     const req = index.openCursor(peerId)
 
+    // TODO: Might break on KaiOS
     let cursor = await reqToPromise<IDBCursorWithValue | null>(req)
 
     while (cursor) {
