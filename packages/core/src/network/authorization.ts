@@ -1,20 +1,20 @@
 import type { TlPublicKey } from '@mtcute/tl/binary/rsa-keys.js'
+import type { ICryptoProvider, Logger } from '../utils/index.js'
 import type { SessionConnection } from './session-connection.js'
 import { typed, u8 } from '@fuman/utils'
 import { BigInteger } from '@modern-dev/jsbn'
-import { mtp } from '@mtcute/tl'
 
+import { mtp } from '@mtcute/tl'
 import { TlBinaryReader, TlBinaryWriter, TlSerializationCounter } from '@mtcute/tl-runtime'
 import Long from 'long'
 import { MtArgumentError, MtSecurityError, MtTypeAssertionError } from '../types/index.js'
 import { findKeyByFingerprints } from '../utils/crypto/keys.js'
 import { millerRabin } from '../utils/crypto/miller-rabin.js'
-import { generateKeyAndIvFromNonce } from '../utils/crypto/mtproto.js'
 
-import { fromBytes, fromInt, fromRadix, geq, type ICryptoProvider, leq, type Logger, toBytes } from '../utils/index.js'
+import { generateKeyAndIvFromNonce } from '../utils/crypto/mtproto.js'
+import { fromBytes, fromInt, fromRadix, geq, leq, toBytes } from '../utils/index.js'
 import { mtpAssertTypeIs } from '../utils/type-assertions.js'
 
-// TODO: Might break on KaiOS (Major Refactor)
 // Heavily based on code from https://github.com/LonamiWebs/Telethon/blob/master/telethon/network/authenticator.py
 
 const TWO = fromInt(2)
@@ -37,30 +37,30 @@ const TWO_POW_2047 = TWO.pow(2047)
 const TWO_POW_2048 = TWO.pow(2048)
 
 interface CheckedPrime {
-    prime: BigInteger
-    generators: number[]
+  prime: BigInteger
+  generators: number[]
 }
 
 const checkedPrimesCache: CheckedPrime[] = []
 
 function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: BigInteger, g: number) {
-    if (KNOWN_DH_PRIME.equals(dhPrime)) {
-        log.debug('server is using known dh prime, skipping validation')
+  if (KNOWN_DH_PRIME.equals(dhPrime)) {
+    log.debug('server is using known dh prime, skipping validation')
 
     return
   }
 
-  let checkedPrime = checkedPrimesCache.find(x => x.prime === dhPrime)
+  let checkedPrime = checkedPrimesCache.find(x => x.prime.equals(dhPrime))
 
   if (!checkedPrime) {
-    if (dhPrime <= TWO_POW_2047 || dhPrime >= TWO_POW_2048) {
+    if (leq(dhPrime, TWO_POW_2047) || geq(dhPrime, TWO_POW_2048)) {
       throw new MtSecurityError('Step 3: dh_prime is not in the 2048-bit range')
     }
 
     if (!millerRabin(crypto, dhPrime)) {
       throw new MtSecurityError('Step 3: dh_prime is not prime')
     }
-    if (!millerRabin(crypto, (dhPrime - 1n) / 2n)) {
+    if (!millerRabin(crypto, dhPrime.subtract(BigInteger.ONE).divide(TWO))) {
       throw new MtSecurityError('Step 3: dh_prime is not a safe prime - (dh_prime-1)/2 is not prime')
     }
 
@@ -85,37 +85,37 @@ function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: BigInteger,
 
   switch (g) {
     case 2:
-      if (dhPrime % 8n !== 7n) {
+      if (!dhPrime.mod(EIGHT).equals(SEVEN)) {
         throw new MtSecurityError('Step 3: ivalid g - dh_prime mod 8 != 7')
       }
       break
     case 3:
-      if (dhPrime % 3n !== 2n) {
+      if (!dhPrime.mod(THREE).equals(TWO)) {
         throw new MtSecurityError('Step 3: ivalid g - dh_prime mod 3 != 2')
       }
       break
     case 4:
       break
     case 5: {
-      const mod = dhPrime % 5n
+      const mod = dhPrime.mod(FIVE)
 
-      if (mod !== 1n && mod !== 4n) {
+      if (!mod.equals(BigInteger.ONE) && !mod.equals(FOUR)) {
         throw new MtSecurityError('Step 3: ivalid g - dh_prime mod 5 != 1 && dh_prime mod 5 != 4')
       }
       break
     }
     case 6: {
-      const mod = dhPrime % 24n
+      const mod = dhPrime.mod(TWENTY_FOUR)
 
-      if (mod !== 19n && mod !== 23n) {
+      if (!mod.equals(NINETEEN) && !mod.equals(TWENTY_THREE)) {
         throw new MtSecurityError('Step 3: ivalid g - dh_prime mod 24 != 19 && dh_prime mod 24 != 23')
       }
       break
     }
     case 7: {
-      const mod = dhPrime % 7n
+      const mod = dhPrime.mod(SEVEN)
 
-      if (mod !== 3n && mod !== 5n && mod !== 6n) {
+      if (!mod.equals(THREE) && !mod.equals(FIVE) && !mod.equals(SIX)) {
         throw new MtSecurityError(
           'Step 3: ivalid g - dh_prime mod 7 != 3 && dh_prime mod 7 != 5 && dh_prime mod 7 != 6',
         )
@@ -134,8 +134,8 @@ function checkDhPrime(crypto: ICryptoProvider, log: Logger, dhPrime: BigInteger,
 function rsaPad(data: Uint8Array, crypto: ICryptoProvider, key: TlPublicKey): Uint8Array {
   // since Summer 2021, they use "version of RSA with a variant of OAEP+ padding explained below"
 
-    const keyModulus = fromRadix(key.modulus, 16)
-    const keyExponent = fromRadix(key.exponent, 16)
+  const keyModulus = fromRadix(key.modulus, 16)
+  const keyExponent = fromRadix(key.exponent, 16)
 
   if (data.length > 144) {
     throw new MtArgumentError('Failed to pad: too big data')
@@ -162,15 +162,15 @@ function rsaPad(data: Uint8Array, crypto: ICryptoProvider, key: TlPublicKey): Ui
     u8.xorInPlace(aesKey, encryptedHash)
     const decryptedData = u8.concat2(aesKey, encrypted)
 
-    const decryptedDataBigint = bigint.fromBytes(decryptedData)
+    const decryptedDataBigint = fromBytes(decryptedData)
 
-    if (decryptedDataBigint >= keyModulus) {
+    if (geq(decryptedDataBigint, keyModulus)) {
       continue
     }
 
-    const encryptedBigint = bigint.modPowBinary(decryptedDataBigint, keyExponent, keyModulus)
+    const encryptedBigint = decryptedDataBigint.modPow(keyExponent, keyModulus)
 
-    return bigint.toBytes(encryptedBigint, 256)
+    return toBytes(encryptedBigint, 256)
   }
 }
 
@@ -182,13 +182,9 @@ function rsaEncrypt(data: Uint8Array, crypto: ICryptoProvider, key: TlPublicKey)
     crypto.randomBytes(235 - data.length),
   )
 
-  const encryptedBigInt = bigint.modPowBinary(
-    bigint.fromBytes(toEncrypt),
-    BigInt(`0x${key.exponent}`),
-    BigInt(`0x${key.modulus}`),
-  )
+  const encryptedBigInt = fromBytes(toEncrypt).modPow(fromRadix(key.exponent, 16), fromRadix(key.modulus, 16))
 
-  return bigint.toBytes(encryptedBigInt)
+  return toBytes(encryptedBigInt)
 }
 
 /**
@@ -261,7 +257,7 @@ export async function doAuthorization(
   }
   log.debug('found server key, fp = %s, old = %s', publicKey.fingerprint, publicKey.old)
 
-  if (millerRabin(crypto, bigint.fromBytes(resPq.pq))) {
+  if (millerRabin(crypto, fromBytes(resPq.pq))) {
     throw new MtSecurityError('Step 2: pq is prime')
   }
 
@@ -341,12 +337,13 @@ export async function doAuthorization(
     throw new Error('Step 3: invalid server nonce from server')
   }
 
-  const dhPrime = bigint.fromBytes(serverDhInner.dhPrime)
+  const dhPrime = fromBytes(serverDhInner.dhPrime)
   const timeOffset = serverDhInner.serverTime - Math.floor(performance.now() / 1000)
+
   session.updateTimeOffset(timeOffset)
 
-  const g = BigInt(serverDhInner.g)
-  const gA = bigint.fromBytes(serverDhInner.gA)
+  const g = fromInt(serverDhInner.g)
+  const gA = fromBytes(serverDhInner.gA)
 
   checkDhPrime(crypto, log, dhPrime, serverDhInner.g)
 
@@ -354,31 +351,35 @@ export async function doAuthorization(
   const serverSalt = u8.xor(newNonce.subarray(0, 8), resPq.serverNonce.subarray(0, 8))
 
   for (;;) {
-    const b = bigint.fromBytes(crypto.randomBytes(256))
-    const gB = bigint.modPowBinary(g, b, dhPrime)
+    const b = fromBytes(crypto.randomBytes(256))
+    const gB = g.modPow(b, dhPrime)
 
-    const authKey = bigint.toBytes(bigint.modPowBinary(gA, b, dhPrime))
+    const authKey = toBytes(gA.modPow(b, dhPrime))
     const authKeyAuxHash = crypto.sha1(authKey).subarray(0, 8)
 
+    const dhPrimeSub1 = dhPrime.subtract(BigInteger.ONE)
+
     // validate DH params
-    if (g <= 1 || g >= dhPrime - 1n) {
+    if (leq(g, BigInteger.ONE) || geq(g, dhPrimeSub1)) {
       throw new MtSecurityError('g is not within (1, dh_prime - 1)')
     }
-    if (gA <= 1 || gA >= dhPrime - 1n) {
+    if (leq(gA, BigInteger.ONE) || geq(gA, dhPrimeSub1)) {
       throw new MtSecurityError('g_a is not within (1, dh_prime - 1)')
     }
-    if (gB <= 1 || gB >= dhPrime - 1n) {
+    if (leq(gB, BigInteger.ONE) || geq(gB, dhPrimeSub1)) {
       throw new MtSecurityError('g_b is not within (1, dh_prime - 1)')
     }
 
-    if (gA <= DH_SAFETY_RANGE || gA >= dhPrime - DH_SAFETY_RANGE) {
+    const dhPrimeSubDHSAFETYRANGE = dhPrime.subtract(DH_SAFETY_RANGE)
+
+    if (leq(gA, DH_SAFETY_RANGE) || geq(gA, dhPrimeSubDHSAFETYRANGE)) {
       throw new MtSecurityError('g_a is not within (2^{2048-64}, dh_prime - 2^{2048-64})')
     }
-    if (gB <= DH_SAFETY_RANGE || gB >= dhPrime - DH_SAFETY_RANGE) {
+    if (leq(gB, DH_SAFETY_RANGE) || geq(gB, dhPrimeSubDHSAFETYRANGE)) {
       throw new MtSecurityError('g_b is not within (2^{2048-64}, dh_prime - 2^{2048-64})')
     }
 
-    const gB_ = bigint.toBytes(gB, 0)
+    const gB_ = toBytes(gB, 0)
 
     // Step 4: send client DH
     const clientDhInner: mtp.RawMt_client_DH_inner_data = {

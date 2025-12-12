@@ -2,7 +2,7 @@ import type { ISyncWritable } from '@fuman/io'
 import type { ICryptoProvider } from '../../utils/crypto/abstract.js'
 import type { Logger } from '../../utils/logger.js'
 import type { IPacketCodec } from '../transports/index.js'
-import { Bytes, type ISyncWritable, read } from '@fuman/io'
+import { Bytes, read } from '@fuman/io'
 
 import { typed, u8 } from '@fuman/utils'
 import { BigInteger } from '@modern-dev/jsbn'
@@ -23,35 +23,35 @@ const BigInteger_486662 = fromInt(486662)
 const FOUR = fromInt(4)
 
 function _getY2(x: BigInteger, mod: BigInteger): BigInteger {
-    // returns y = x^3 + x^2 * 486662 + x
-    let y = x
-    y = y.add(BigInteger_486662).mod(mod)
-    y = y.multiply(x).mod(mod)
-    y = y.add(BigInteger.ONE).mod(mod)
-    y = y.multiply(x).mod(mod)
+  // returns y = x^3 + x^2 * 486662 + x
+  let y = x
+  y = y.add(BigInteger_486662).mod(mod)
+  y = y.multiply(x).mod(mod)
+  y = y.add(BigInteger.ONE).mod(mod)
+  y = y.multiply(x).mod(mod)
 
-    return y
+  return y
 }
 
 function _getDoubleX(x: BigInteger, mod: BigInteger): BigInteger {
-    // returns x_2 = (x^2 - 1)^2/(4*y^2)
-    let denominator = _getY2(x, mod)
-    denominator = denominator.multiply(FOUR).mod(mod)
+  // returns x_2 = (x^2 - 1)^2/(4*y^2)
+  let denominator = _getY2(x, mod)
+  denominator = denominator.multiply(FOUR).mod(mod)
 
-    let numerator = x.multiply(x).mod(mod)
-    numerator = numerator.subtract(BigInteger.ONE).mod(mod)
-    numerator = numerator.multiply(numerator).mod(mod)
+  let numerator = x.multiply(x).mod(mod)
+  numerator = numerator.subtract(BigInteger.ONE).mod(mod)
+  numerator = numerator.multiply(numerator).mod(mod)
 
-    denominator = denominator.modInverse(mod)
-    numerator = numerator.multiply(denominator).mod(mod)
+  denominator = denominator.modInverse(mod)
+  numerator = numerator.multiply(denominator).mod(mod)
 
   return numerator
 }
 
 function _isQuadraticResidue(a: BigInteger): boolean {
-    const r = a.modPow(QUAD_RES_POW, QUAD_RES_MOD)
+  const r = a.modPow(QUAD_RES_POW, QUAD_RES_MOD)
 
-    return r.equals(BigInteger.ONE)
+  return r.equals(BigInteger.ONE)
 }
 
 function executeTlsOperations(h: TlsHelloWriter): void {
@@ -165,7 +165,7 @@ class TlsHelloWriter {
       const key = this.crypto.randomBytes(32)
       key[31] &= 127
 
-      let x = bigint.fromBytes(key)
+      let x = fromBytes(key)
       const y = _getY2(x, KEY_MOD)
 
       if (_isQuadraticResidue(y)) {
@@ -173,7 +173,7 @@ class TlsHelloWriter {
           x = _getDoubleX(x, KEY_MOD)
         }
 
-        const key = bigint.toBytes(x, 32, true)
+        const key = toBytes(x, 32, true)
         this.string(key)
 
         return

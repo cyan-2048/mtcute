@@ -27,18 +27,15 @@ export class WebPlatform implements ICorePlatform {
       }
     }
 
-    // eslint-disable-next-line unused-imports/no-unused-vars
-    onNetworkChanged(fn: (connected: boolean) => void): () => void {
-        return () => {}
-    }
+    return null
+  }
 
-    isOnline(): boolean {
-        return true
-    }
+  onNetworkChanged(fn: (connected: boolean) => void): () => void {
+    return () => {}
   }
 
   isOnline(): boolean {
-    return navigator.onLine ?? false
+    return true
   }
 }
 
