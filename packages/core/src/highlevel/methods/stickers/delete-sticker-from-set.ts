@@ -1,6 +1,6 @@
-import type { tl } from '@mtcute/tl'
 import type { ITelegramClient } from '../../client.types.js'
 
+import type { InputDocumentId } from '../../types/index.js'
 import { tdFileId } from '@mtcute/file-id'
 import { StickerSet } from '../../types/index.js'
 import { fileIdToInputDocument } from '../../utils/convert-file-id.js'
@@ -16,17 +16,17 @@ import { fileIdToInputDocument } from '../../utils/convert-file-id.js'
  * @returns  Modfiied sticker set
  */
 export async function deleteStickerFromSet(
-    client: ITelegramClient,
-    sticker: string | tdFileId.RawFullRemoteFileLocation | tl.TypeInputDocument,
+  client: ITelegramClient,
+  sticker: InputDocumentId,
 ): Promise<StickerSet> {
-    if (tdFileId.isFileIdLike(sticker)) {
-        sticker = fileIdToInputDocument(sticker)
-    }
+  if (tdFileId.isFileIdLike(sticker)) {
+    sticker = fileIdToInputDocument(sticker)
+  }
 
-    const res = await client.call({
-        _: 'stickers.removeStickerFromSet',
-        sticker,
-    })
+  const res = await client.call({
+    _: 'stickers.removeStickerFromSet',
+    sticker,
+  })
 
-    return new StickerSet(res)
+  return new StickerSet(res)
 }

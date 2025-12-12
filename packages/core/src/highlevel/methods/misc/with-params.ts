@@ -12,26 +12,35 @@ import type { ITelegramClient } from '../../client.types.js'
  * @returns The wrapped client
  */
 export function withParams<T extends ITelegramClient>(client: T, params: RpcCallOptions): T {
+  const wrappedClientsMap = new WeakMap<ITelegramClient, ITelegramClient>()
+
+  function wrapClient(client: ITelegramClient): ITelegramClient {
+    const existing = wrappedClientsMap.get(client)
+    if (existing) return existing
+
     const wrappedCall = (message: tl.RpcMethod, extraParams?: RpcCallOptions) =>
-        client.call(message, extraParams ? { ...params, ...extraParams } : params)
+      client.call(message, extraParams ? { ...params, ...extraParams } : params)
 
-    const proxy: T = new Proxy<T>(client, {
-        get: (target, prop, receiver) => {
-            if (prop === 'call') {
-                return wrappedCall
-            }
+    const wrapped = new Proxy(client, {
+      get: (target, prop, receiver) => {
+        if (prop === 'call') return wrappedCall
 
-            if (prop === '_client') {
-                // ideally we would wrap it as well, but it's not really needed, since TelegramClient
-                // TelegramClient stores underlying client in _client
-                // itself implements ITelegramClient
-                // very much a hack, but i dont care :D
-                return proxy
-            }
+        // eslint-disable-next-line  ts/no-unsafe-assignment
+        const res = Reflect.get(target, prop, receiver)
+        if (res && typeof res === 'object' && 'storage' in res && 'call' in res) {
+          // assume it's an ITelegramClient
+          // eslint-disable-next-line ts/no-unsafe-argument
+          return wrapClient(res)
+        }
 
-            return Reflect.get(target, prop, receiver)
-        },
+        // eslint-disable-next-line ts/no-unsafe-return
+        return res
+      },
     })
 
-    return proxy
+    wrappedClientsMap.set(client, wrapped)
+    return wrapped
+  }
+
+  return wrapClient(client) as T
 }

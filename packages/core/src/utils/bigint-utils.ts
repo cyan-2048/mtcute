@@ -152,7 +152,7 @@ export function randomBigIntBits(crypto: ICryptoProvider, bits: number): BigInte
         num.rShiftTo(toTrim, num)
     }
 
-    return num
+  return num
 }
 
 /**
@@ -164,7 +164,7 @@ export function randomBigIntBits(crypto: ICryptoProvider, bits: number): BigInte
 export function randomBigIntInRange(
     crypto: ICryptoProvider,
     max: BigInteger,
-    min: BigInteger = fromInt(0),
+    min: BigInteger = fromInt(1),
 ): BigInteger {
     const interval = max.subtract(min)
     // if (interval < 0n) throw new Error('expected min < max')

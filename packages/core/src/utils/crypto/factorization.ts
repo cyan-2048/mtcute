@@ -15,8 +15,8 @@ export function factorizePQSync(crypto: ICryptoProvider, pq: Uint8Array): [Uint8
     const n = PollardRhoBrent(crypto, pq_)
     const m = pq_.divide(n)
 
-    let p
-    let q
+  let p
+  let q
 
     if (lt(n, m)) {
         p = n
@@ -77,5 +77,5 @@ function PollardRhoBrent(crypto: ICryptoProvider, n: BigInteger): BigInteger {
         } while (leq(g, BigInteger.ONE))
     }
 
-    return g
+  return g
 }

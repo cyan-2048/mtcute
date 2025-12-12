@@ -19,15 +19,15 @@ import { assertTypeIs } from '../type-assertions.js'
  * @param salt2  Salt 2
  */
 export async function computePasswordHash(
-    crypto: ICryptoProvider,
-    password: Uint8Array,
-    salt1: Uint8Array,
-    salt2: Uint8Array,
+  crypto: ICryptoProvider,
+  password: Uint8Array,
+  salt1: Uint8Array,
+  salt2: Uint8Array,
 ): Promise<Uint8Array> {
-    const SH = (data: Uint8Array, salt: Uint8Array) => crypto.sha256(u8.concat3(salt, data, salt))
-    const PH1 = (pwd: Uint8Array, salt1: Uint8Array, salt2: Uint8Array) => SH(SH(pwd, salt1), salt2)
+  const SH = (data: Uint8Array, salt: Uint8Array) => crypto.sha256(u8.concat3(salt, data, salt))
+  const PH1 = (pwd: Uint8Array, salt1: Uint8Array, salt2: Uint8Array) => SH(SH(pwd, salt1), salt2)
 
-    return SH(await crypto.pbkdf2(PH1(password, salt1, salt2), salt1, 100000), salt2)
+  return SH(await crypto.pbkdf2(PH1(password, salt1, salt2), salt1, 100000), salt2)
 }
 
 /**
@@ -38,18 +38,18 @@ export async function computePasswordHash(
  * @param password  Password
  */
 export async function computeNewPasswordHash(
-    crypto: ICryptoProvider,
-    algo: tl.TypePasswordKdfAlgo,
-    password: string,
+  crypto: ICryptoProvider,
+  algo: tl.TypePasswordKdfAlgo,
+  password: string,
 ): Promise<Uint8Array> {
-    assertTypeIs('account.getPassword', algo, 'passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow')
+  assertTypeIs('account.getPassword', algo, 'passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow')
 
-    const salt1 = u8.alloc(algo.salt1.length + 32)
-    salt1.set(algo.salt1)
-    crypto.randomFill(salt1.subarray(algo.salt1.length))
-    ;(algo as tl.Mutable<typeof algo>).salt1 = salt1
+  const salt1 = u8.alloc(algo.salt1.length + 32)
+  salt1.set(algo.salt1)
+  crypto.randomFill(salt1.subarray(algo.salt1.length))
+  ;(algo as tl.Mutable<typeof algo>).salt1 = salt1
 
-    const _x = await computePasswordHash(crypto, utf8.encoder.encode(password), algo.salt1, algo.salt2)
+  const _x = await computePasswordHash(crypto, utf8.encoder.encode(password), algo.salt1, algo.salt2)
 
     const g = fromInt(algo.g)
     const p = fromBytes(algo.p)
@@ -66,9 +66,9 @@ export async function computeNewPasswordHash(
  * @param password  2fa password
  */
 export async function computeSrpParams(
-    crypto: ICryptoProvider,
-    request: tl.account.RawPassword,
-    password: string,
+  crypto: ICryptoProvider,
+  request: tl.account.RawPassword,
+  password: string,
 ): Promise<tl.RawInputCheckPasswordSRP> {
     // nice naming thx durov
     if (

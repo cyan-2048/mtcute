@@ -16,8 +16,8 @@ export function millerRabin(crypto: ICryptoProvider, n: BigInteger, rounds = 20)
     const r = twoMultiplicity(nSub)
     const d = nSub.shiftRight(r.intValue())
 
-    for (let i = 0; i < rounds; i++) {
-        let base
+  for (let i = 0; i < rounds; i++) {
+    let base
 
         do {
             base = randomBigIntBits(crypto, nBits)
@@ -44,5 +44,8 @@ export function millerRabin(crypto: ICryptoProvider, n: BigInteger, rounds = 20)
         if (i.equals(r)) return false
     }
 
-    return true
+    if (i === r) return false
+  }
+
+  return true
 }

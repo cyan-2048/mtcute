@@ -8,26 +8,23 @@ import { beforeExit } from './exit-hook.js'
 // </deno-insert>
 
 export class WebPlatform implements ICorePlatform {
-    // ICorePlatform
-    declare log: typeof defaultLoggingHandler
-    declare beforeExit: typeof beforeExit
+  // ICorePlatform
+  declare log: typeof defaultLoggingHandler
+  declare beforeExit: typeof beforeExit
 
-    getDeviceModel(): string {
-        if (typeof navigator === 'undefined') return 'Browser'
+  getDeviceModel(): string {
+    if (typeof navigator === 'undefined') return 'Browser'
 
-        return navigator.userAgent
-    }
+    return navigator.userAgent
+  }
 
-    getDefaultLogLevel(): number | null {
-        if (typeof localStorage !== 'undefined') {
-            const localLogLevel = Number.parseInt(localStorage.MTCUTE_LOG_LEVEL as string)
+  getDefaultLogLevel(): number | null {
+    if (typeof localStorage !== 'undefined') {
+      const localLogLevel = Number.parseInt(localStorage.MTCUTE_LOG_LEVEL as string)
 
-            if (!Number.isNaN(localLogLevel)) {
-                return localLogLevel
-            }
-        }
-
-        return null
+      if (!Number.isNaN(localLogLevel)) {
+        return localLogLevel
+      }
     }
 
     // eslint-disable-next-line unused-imports/no-unused-vars
@@ -38,6 +35,11 @@ export class WebPlatform implements ICorePlatform {
     isOnline(): boolean {
         return true
     }
+  }
+
+  isOnline(): boolean {
+    return navigator.onLine ?? false
+  }
 }
 
 WebPlatform.prototype.log = defaultLoggingHandler

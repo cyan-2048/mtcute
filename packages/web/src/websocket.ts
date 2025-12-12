@@ -1,30 +1,30 @@
 import type { WebSocketConstructor } from '@fuman/net'
 import type {
-    IPacketCodec,
-    ITelegramConnection,
-    TelegramTransport,
+  IPacketCodec,
+  ITelegramConnection,
+  TelegramTransport,
 } from '@mtcute/core'
 import type { BasicDcOption } from './utils.js'
 import { connectWs } from '@fuman/net'
 
 import {
-    IntermediatePacketCodec,
-    MtUnsupportedError,
-    ObfuscatedPacketCodec,
+  IntermediatePacketCodec,
+  MtUnsupportedError,
+  ObfuscatedPacketCodec,
 } from '@mtcute/core'
 
 const subdomainsMap: Record<string, string> = {
-    1: 'pluto',
-    2: 'venus',
-    3: 'aurora',
-    4: 'vesta',
-    5: 'flora',
+  1: 'pluto',
+  2: 'venus',
+  3: 'aurora',
+  4: 'vesta',
+  5: 'flora',
 }
 
 export class WebSocketTransport implements TelegramTransport {
-    private _baseDomain: string
-    private _subdomains: Record<string, string>
-    private _WebSocket: WebSocketConstructor
+  private _baseDomain: string
+  private _subdomains: Record<string, string>
+  private _WebSocket: WebSocketConstructor
 
     constructor({
         ws = WebSocket,
@@ -48,27 +48,27 @@ export class WebSocketTransport implements TelegramTransport {
             )
         }
 
-        // gotta love cjs/esm compat
-        if ('default' in ws) {
-            ws = ws.default as WebSocketConstructor
-        }
-
-        this._baseDomain = baseDomain
-        this._subdomains = subdomains
-        this._WebSocket = ws
+    // gotta love cjs/esm compat
+    if ('default' in ws) {
+      ws = ws.default as WebSocketConstructor
     }
 
-    async connect(dc: BasicDcOption): Promise<ITelegramConnection> {
-        const url = `wss://${this._subdomains[dc.id]}.${this._baseDomain}/apiws${dc.testMode ? '_test' : ''}`
+    this._baseDomain = baseDomain
+    this._subdomains = subdomains
+    this._WebSocket = ws
+  }
 
-        return connectWs({
-            url,
-            implementation: this._WebSocket,
-            protocols: 'binary',
-        })
-    }
+  async connect(dc: BasicDcOption): Promise<ITelegramConnection> {
+    const url = `wss://${this._subdomains[dc.id]}.${this._baseDomain}/apiws${dc.testMode ? '_test' : ''}`
 
-    packetCodec(): IPacketCodec {
-        return new ObfuscatedPacketCodec(new IntermediatePacketCodec())
-    }
+    return connectWs({
+      url,
+      implementation: this._WebSocket,
+      protocols: 'binary',
+    })
+  }
+
+  packetCodec(): IPacketCodec {
+    return new ObfuscatedPacketCodec(new IntermediatePacketCodec())
+  }
 }

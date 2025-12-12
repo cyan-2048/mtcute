@@ -1,7 +1,7 @@
 {
   "name": "@mtcute/test",
   "type": "module",
-  "version": "0.25.8",
+  "version": "0.27.2",
   "private": true,
   "description": "Test utilities for mtcute",
   "author": "alina sireneva <alina@tei.su>",
@@ -25,8 +25,8 @@
   },
   "dependencies": {
     "long": "5.2.3",
-    "@fuman/utils": "0.0.15",
-    "@fuman/net": "0.0.15"
+    "@fuman/utils": "0.0.17",
+    "@fuman/net": "0.0.17"
   },
   "devDependencies": {
     "@mtcute/tl-utils": "workspace:^"
