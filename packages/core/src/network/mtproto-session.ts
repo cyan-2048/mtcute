@@ -6,7 +6,7 @@ import type {
   Logger,
 } from '../utils/index.js'
 import type { ServerSaltManager } from './server-salt.js'
-import { Deque, LruSet, timers } from '@fuman/utils'
+import { Deque, LruMap, LruSet, timers } from '@fuman/utils'
 
 import { TlSerializationCounter } from '@mtcute/tl-runtime'
 import Long from 'long'
@@ -107,6 +107,7 @@ export class MtprotoSession {
   // recent msg ids
   recentOutgoingMsgIds: LruSet<Long> = new LruSet(1000, LongSet)
   recentIncomingMsgIds: LruSet<Long> = new LruSet(1000, LongSet)
+  recentStateRequests: LruMap<Long, Long[]> = new LruMap(1000, LongMap)
 
   // queues
   queuedRpc: Deque<PendingRpc> = new Deque()
@@ -162,7 +163,8 @@ export class MtprotoSession {
       this.queuedRpc.length
       || this.queuedAcks.length
       || this.queuedStateReq.length
-      || this.queuedResendReq.length,
+      || this.queuedResendReq.length
+      || this.queuedCancelReq.length,
     )
   }
 
@@ -220,6 +222,7 @@ export class MtprotoSession {
 
     this.recentOutgoingMsgIds.clear()
     this.recentIncomingMsgIds.clear()
+    this.recentStateRequests.clear()
 
     if (!keepPending) {
       while (this.queuedRpc.length) {

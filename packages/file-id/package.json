@@ -1,7 +1,7 @@
 {
   "name": "@mtcute/file-id",
   "type": "module",
-  "version": "0.27.6",
+  "version": "0.27.8",
   "private": true,
   "description": "Support for TDLib and Bot API file ID for mtcute",
   "author": "alina sireneva <alina@tei.su>",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@mtcute/tl-runtime": "workspace:^",
-    "@fuman/utils": "0.0.17",
+    "@fuman/utils": "0.0.19",
     "long": "5.2.3"
   }
 }
