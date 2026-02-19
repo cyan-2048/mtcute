@@ -82,11 +82,14 @@ import { getChatMember } from './methods/chats/get-chat-member.js'
 import { getChatMembers } from './methods/chats/get-chat-members.js'
 import { getChatPreview } from './methods/chats/get-chat-preview.js'
 import { getChat } from './methods/chats/get-chat.js'
+import { getChats } from './methods/chats/get-chats.js'
+import { getCreatorAfterLeave } from './methods/chats/get-creator-after-leave.js'
 import { getFullChat } from './methods/chats/get-full-chat.js'
 import { getFullUser } from './methods/chats/get-full-user.js'
 import { getMessageAuthor } from './methods/chats/get-message-author.js'
 import { getNearbyChats } from './methods/chats/get-nearby-chats.js'
 import { getPeer } from './methods/chats/get-peer.js'
+import { getPeers } from './methods/chats/get-peers.js'
 import { getSimilarChannels } from './methods/chats/get-similar-channels.js'
 import { getUser } from './methods/chats/get-user.js'
 import { iterChatEventLog } from './methods/chats/iter-chat-event-log.js'
@@ -1673,6 +1676,23 @@ export interface TelegramClient extends ITelegramClient {
   getChat(chatId: InputPeerLike): Promise<Chat>
 
   /**
+   * Get basic information about multiple chats.
+   *
+   * **Available**: ✅ both users and bots
+   *
+   * @param chatIds  Chat identifiers. Can be ID, username or TL object
+   * @returns  The list of chats in the same order as the input
+   */
+  getChats(chatIds: InputPeerLike[]): Promise<(Chat | null)[]>
+  /**
+   * Get the user who will be made the creator of the channel/supergroup if you were to leave it.
+   *
+   * You must be the creator of the channel/supergroup to use this method.
+   */
+  getCreatorAfterLeave(
+    chatId: InputPeerLike): Promise<User | null>
+
+  /**
    * Get full information about a chat.
    *
    * **Available**: ✅ both users and bots
@@ -1706,6 +1726,16 @@ export interface TelegramClient extends ITelegramClient {
   getNearbyChats(latitude: number, longitude: number): Promise<Chat[]>
   /** Shorthand for {@link getChat} and {@link getUser} depending on the type of the peer */
   getPeer(peer: InputPeerLike): Promise<Peer>
+
+  /**
+   * Get basic information about multiple peers.
+   *
+   * **Available**: ✅ both users and bots
+   *
+   * @param chatIds  Chat identifiers. Can be ID, username or TL object
+   * @returns  The list of peers in the same order as the input
+   */
+  getPeers(chatIds: InputPeerLike[]): Promise<(Peer | null)[]>
 
   /**
    * Get channels that are similar to a given channel
@@ -3019,6 +3049,9 @@ export interface TelegramClient extends ITelegramClient {
        * - `num`: Sort by its unique number
        */
       sort?: 'price' | 'num'
+
+      /** Whether to filter for options that can be used in a craft */
+      forCraft?: boolean
 
       /**
        * Hash of the `attributes` field, as returned by the server in the first response
@@ -6119,11 +6152,10 @@ export interface TelegramClient extends ITelegramClient {
    * Get information about multiple users.
    * You can retrieve up to 200 users at once.
    *
-   * Note that order is not guaranteed.
-   *
    * **Available**: ✅ both users and bots
    *
    * @param ids  Users' identifiers. Can be ID, username, phone number, `"me"`, `"self"` or TL object
+   * @returns  The list of users in the same order as the input
    */
   getUsers(ids: MaybeArray<InputPeerLike>): Promise<(User | null)[]>
   /**
@@ -6710,6 +6742,12 @@ TelegramClient.prototype.getChatPreview = function (...args) {
 TelegramClient.prototype.getChat = function (...args) {
   return getChat(this._client, ...args)
 }
+TelegramClient.prototype.getChats = function (...args) {
+  return getChats(this._client, ...args)
+}
+TelegramClient.prototype.getCreatorAfterLeave = function (...args) {
+  return getCreatorAfterLeave(this._client, ...args)
+}
 TelegramClient.prototype.getFullChat = function (...args) {
   return getFullChat(this._client, ...args)
 }
@@ -6724,6 +6762,9 @@ TelegramClient.prototype.getNearbyChats = function (...args) {
 }
 TelegramClient.prototype.getPeer = function (...args) {
   return getPeer(this._client, ...args)
+}
+TelegramClient.prototype.getPeers = function (...args) {
+  return getPeers(this._client, ...args)
 }
 TelegramClient.prototype.getSimilarChannels = function (...args) {
   return getSimilarChannels(this._client, ...args)
