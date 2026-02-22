@@ -15,7 +15,7 @@ import { _getRawPeerBatched } from './batched-queries.js'
 export async function getPeers(client: ITelegramClient, chatIds: InputPeerLike[]): Promise<(Peer | null)[]> {
   const inputPeers = await resolvePeerMany(client, chatIds)
 
-  // eslint-ignore-next-line ts/await-thenable
+  // eslint-disable-next-line ts/await-thenable
   const res = await Promise.all(inputPeers.map(peer => peer ? _getRawPeerBatched(client, peer) : null))
 
   return res.map(it => it ? parsePeer(it) : null)

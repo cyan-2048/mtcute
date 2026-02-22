@@ -16,7 +16,7 @@ import { _getChannelsBatched, _getChatsBatched } from './batched-queries.js'
 export async function getChats(client: ITelegramClient, chatIds: InputPeerLike[]): Promise<(Chat | null)[]> {
   const inputPeers = await resolvePeerMany(client, chatIds)
 
-  // eslint-ignore-next-line ts/await-thenable
+  // eslint-disable-next-line ts/await-thenable
   const res = await Promise.all(inputPeers.map((peer) => {
     if (!peer) return null
     if (isInputPeerChannel(peer)) {
