@@ -77,6 +77,7 @@ import { deleteGroup } from './methods/chats/delete-group.js'
 import { deleteHistory } from './methods/chats/delete-history.js'
 import { deleteUserHistory } from './methods/chats/delete-user-history.js'
 import { editAdminRights } from './methods/chats/edit-admin-rights.js'
+import { editChatMemberRank } from './methods/chats/edit-chat-member-rank.js'
 import { getChatEventLog } from './methods/chats/get-chat-event-log.js'
 import { getChatMember } from './methods/chats/get-chat-member.js'
 import { getChatMembers } from './methods/chats/get-chat-members.js'
@@ -114,6 +115,7 @@ import { toggleContentProtection } from './methods/chats/toggle-content-protecti
 import { toggleFragmentUsername } from './methods/chats/toggle-fragment-username.js'
 import { toggleJoinRequests } from './methods/chats/toggle-join-requests.js'
 import { toggleJoinToSend } from './methods/chats/toggle-join-to-send.js'
+import { transferChatOwnership } from './methods/chats/transfer-chat-ownership.js'
 import { unarchiveChats } from './methods/chats/unarchive-chats.js'
 import { unbanChatMember } from './methods/chats/unban-chat-member.js'
 import { addContact } from './methods/contacts/add-contact.js'
@@ -1513,6 +1515,18 @@ export interface TelegramClient extends ITelegramClient {
       rank?: string
     }): Promise<void>
   /**
+   * Edit the custom rank (title) of a group chat participant.
+   */
+  editChatMemberRank(
+    params: {
+    /** Chat ID */
+      chatId: InputPeerLike
+      /** ID of the user to edit the rank of */
+      participantId: InputPeerLike
+      /** New rank, or `null` to remove it */
+      rank: string | null
+    }): Promise<void>
+  /**
    * Get chat event log ("Recent actions" in official clients).
    *
    * Only available for supergroups and channels, and
@@ -1685,9 +1699,9 @@ export interface TelegramClient extends ITelegramClient {
    */
   getChats(chatIds: InputPeerLike[]): Promise<(Chat | null)[]>
   /**
-   * Get the user who will be made the creator of the channel/supergroup if you were to leave it.
+   * Get the user who will be made the creator of the chat/channel/supergroup if you were to leave it.
    *
-   * You must be the creator of the channel/supergroup to use this method.
+   * You must be the creator of the chat/channel/supergroup to use this method.
    */
   getCreatorAfterLeave(
     chatId: InputPeerLike): Promise<User | null>
@@ -2091,7 +2105,11 @@ export interface TelegramClient extends ITelegramClient {
    * @param [enabled=false]  Whether content protection should be enabled
    */
   toggleContentProtection(
-    chatId: InputPeerLike, enabled?: boolean): Promise<void>
+    chatId: InputPeerLike, enabled?: boolean,
+    params?: {
+    /** If this method was called in response to the other party enabling content protection, ID of that message */
+      requestMsgId?: number
+    }): Promise<void>
   /**
    * Toggle a collectible (Fragment) username
    *
@@ -2140,6 +2158,21 @@ export interface TelegramClient extends ITelegramClient {
    * @param [enabled=false]  Whether join-to-send setting should be enabled
    */
   toggleJoinToSend(chatId: InputPeerLike, enabled?: boolean): Promise<void>
+  /**
+   * Transfer ownership of a chat/channel/supergroup to another user.
+   *
+   * You must be the creator of the chat to use this method,
+   * and your account must have 2FA enabled.
+   */
+  transferChatOwnership(
+    params: {
+    /** ID of the chat/channel/supergroup to transfer */
+      chatId: InputPeerLike
+      /** ID of the user to transfer ownership to */
+      userId: InputPeerLike
+      /** Your 2FA password */
+      password: string
+    }): Promise<void>
   /**
    * Unarchive one or more chats
    *
@@ -2252,6 +2285,8 @@ export interface TelegramClient extends ITelegramClient {
     contacts: PartialOnly<Omit<tl.RawInputPhoneContact, '_'>, 'clientId'>[]): Promise<tl.contacts.RawImportedContacts>
   /**
    * Set a note for a contact
+   *
+   * **Available**: 👤 users only
    *
    * @param userId  ID of the user to set the note for
    * @param note  Note text
@@ -2747,6 +2782,8 @@ export interface TelegramClient extends ITelegramClient {
    *
    * Only admins with `manageTopics` permission can do this.
    *
+   * **Available**: 👤 users only
+   *
    * @returns  Service message for the created topic
    */
   createForumTopic(
@@ -2783,6 +2820,8 @@ export interface TelegramClient extends ITelegramClient {
   /**
    * Delete a forum topic and all its history
    *
+   * **Available**: 👤 users only
+   *
    * @param chat  Chat or user ID, username, phone number, `"me"` or `"self"`
    * @param topicId  ID of the topic (i.e. its top message ID)
    */
@@ -2800,6 +2839,8 @@ export interface TelegramClient extends ITelegramClient {
    * Modify a topic in a forum
    *
    * Only admins with `manageTopics` permission can do this.
+   *
+   * **Available**: 👤 users only
    *
    * @param chatId  Chat ID or username
    * @param topicId  ID of the topic (i.e. its top message ID)
@@ -2841,6 +2882,8 @@ export interface TelegramClient extends ITelegramClient {
   /**
    * Get forum topics by their IDs
    *
+   * **Available**: 👤 users only
+   *
    * @param chatId  Chat ID or username
    */
   getForumTopicsById(
@@ -2848,6 +2891,8 @@ export interface TelegramClient extends ITelegramClient {
     ids: MaybeArray<number>): Promise<ForumTopic[]>
   /**
    * Get forum topics
+   *
+   * **Available**: 👤 users only
    *
    * @param chatId  Chat ID or username
    */
@@ -2897,6 +2942,8 @@ export interface TelegramClient extends ITelegramClient {
    * Reorder pinned forum topics
    *
    * Only admins with `manageTopics` permission can do this.
+   * **Available**: 👤 users only
+   *
    */
   reorderPinnedForumTopics(
     params: {
@@ -2917,6 +2964,8 @@ export interface TelegramClient extends ITelegramClient {
    * Toggle open/close status of a topic in a forum
    *
    * Only admins with `manageTopics` permission can do this.
+   *
+   * **Available**: 👤 users only
    *
    * @returns  Service message about the modification
    */
@@ -2941,6 +2990,8 @@ export interface TelegramClient extends ITelegramClient {
    * Toggle whether a topic in a forum is pinned
    *
    * Only admins with `manageTopics` permission can do this.
+   * **Available**: 👤 users only
+   *
    */
   toggleForumTopicPinned(
     params: {
@@ -3119,6 +3170,8 @@ export interface TelegramClient extends ITelegramClient {
   getStarGiftOptions(): Promise<StarGift[]>
   /**
    * Get a list of all possible attributes when upgrading a given star gift
+   * **Available**: 👤 users only
+   *
    */
   getStarGiftUpgradeOptions(
     giftId: tl.Long): Promise<StarGiftUpgradeOptions>
@@ -3209,6 +3262,8 @@ export interface TelegramClient extends ITelegramClient {
   /**
    * Accept or decline a purchase offer for a star gift
    *
+   * **Available**: 👤 users only
+   *
    * @returns The generated service message
    */
   resolveStarGiftOffer(
@@ -3227,6 +3282,8 @@ export interface TelegramClient extends ITelegramClient {
     }): Promise<Message>
   /**
    * Create a purchase offer for a unique star gift
+   * **Available**: 👤 users only
+   *
    * @param client
    * @param params
    */
@@ -6727,6 +6784,9 @@ TelegramClient.prototype.deleteUserHistory = function (...args) {
 TelegramClient.prototype.editAdminRights = function (...args) {
   return editAdminRights(this._client, ...args)
 }
+TelegramClient.prototype.editChatMemberRank = function (...args) {
+  return editChatMemberRank(this._client, ...args)
+}
 TelegramClient.prototype.getChatEventLog = function (...args) {
   return getChatEventLog(this._client, ...args)
 }
@@ -6840,6 +6900,9 @@ TelegramClient.prototype.toggleJoinRequests = function (...args) {
 }
 TelegramClient.prototype.toggleJoinToSend = function (...args) {
   return toggleJoinToSend(this._client, ...args)
+}
+TelegramClient.prototype.transferChatOwnership = function (...args) {
+  return transferChatOwnership(this._client, ...args)
 }
 TelegramClient.prototype.unarchiveChats = function (...args) {
   return unarchiveChats(this._client, ...args)

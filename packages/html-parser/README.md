@@ -4,7 +4,8 @@
 
 HTML entities parser for mtcute
 
-> **NOTE**: The syntax implemented here is **incompatible** with Bot API _HTML_.
+> **NOTE**: The `html` variant uses HTML-like whitespace collapsing, which is **incompatible** with Bot API _HTML_.
+> Use `thtml` for Bot API-compatible whitespace handling.
 >
 > Please read [Syntax](#syntax) below for a detailed explanation
 
@@ -16,6 +17,13 @@ HTML entities parser for mtcute
 
 ## Usage
 
+This package exports two tagged template functions: `html` and `thtml`.
+
+### `html` - HTML-like whitespace
+
+Whitespace is collapsed just like in real HTML: newlines and consecutive spaces become a single space.
+Use `<br>` for line breaks and `&nbsp;` for multiple spaces.
+
 ```ts
 import { html } from '@mtcute/html-parser'
 
@@ -26,7 +34,30 @@ tg.sendText(
         ${await getUpdatesFromFeed()}
     `
 )
+// text: "Hello, me! Updates from the feed:\n..."
 ```
+
+### `thtml` - preserved whitespace
+
+Whitespace (spaces and newlines) is kept as-is, Bot API style. 
+Common leading indentation is automatically stripped (dedented), so it's safe to use in indented code.
+
+```ts
+import { thtml } from '@mtcute/html-parser'
+
+tg.sendText(
+    'me',
+    thtml`
+        Hello, <b>me</b>!
+        Updates from the feed:
+        ${await getUpdatesFromFeed()}
+    `
+)
+// text: "Hello, me!\nUpdates from the feed:\n..."
+```
+
+Both functions also have `.escape()` and `.unparse()` static methods.
+`thtml.unparse()` preserves whitespace in the output (no `<br>` / `&nbsp;` conversion).
 
 ## Syntax
 
@@ -34,12 +65,14 @@ tg.sendText(
 supports nearly any HTML. However, since the text is still processed in a custom way for Telegram, the supported subset
 of features is documented below:
 
-## Line breaks and spaces
+## Line breaks and spaces (`html`)
 
-Line breaks are **not** preserved, `<br>` is used instead,
+When using `html`, line breaks are **not** preserved, `<br>` is used instead,
 making the syntax very close to the one used when building web pages.
 
 Multiple spaces and indents are collapsed (except in `pre`), when you do need multiple spaces use `&nbsp;` instead.
+
+When using `thtml`, whitespace is preserved as-is and no collapsing is performed.
 
 ## Inline entities
 
@@ -49,13 +82,14 @@ Inline entities are entities that are in-line with other text. We support these 
 | ---------------- | ---------------------------------------------------------------- | ---------------------------- |
 | Bold             | `<b>text</b>`, `<strong>text</strong>`                           | **text**                     |
 | Italic           | `<i>text</i>`, `<em>text</em>`                                   | _text_                       |
-| Underline        | `<u>text</u>`                                                    | <u>text</u>                  |
+| Underline        | `<u>text</u>`, `<ins>text</ins>`                                 | <u>text</u>                  |
 | Strikethrough    | `<s>text</s>`, `<del>text</del>`, `<strike>text</strike>`        | ~~text~~                     |
-| Spoiler          | `<spoiler>text</spoiler>` (or `tg-spoiler`)                      | N/A                          |
+| Spoiler          | `<spoiler>text</spoiler>`, `<tg-spoiler>`, `<span class="tg-spoiler">` | N/A                     |
 | Monospace (code) | `<code>text</code>`                                              | `text`                       |
 | Text link        | `<a href="https://google.com">Google</a>`                        | [Google](https://google.com) |
 | Text mention     | `<a href="tg://user?id=1234567">Name</a>`                        | N/A                          |
 | Custom emoji     | `<emoji id="12345">😄</emoji>` (or `<tg-emoji emoji-id="...">`)  | N/A                          |
+| Date-time        | `<tg-time unix="1647531900" format="t">22:45</tg-time>`          | N/A                          |
 
 > **Note**: It is up to the client to look up user's input entity by ID for text mentions.
 > In most cases, you can only use IDs of users that were seen by the client while using given storage.
@@ -65,16 +99,44 @@ Inline entities are entities that are in-line with other text. We support these 
 > written as a hexadecimal integer. Order of the parameters does matter, i.e.
 > `tg://user?hash=abc&id=1234567` will not be processed as expected.
 
+## Date-time entities
+
+Date-time entities display a unix timestamp formatted according to the user's locale.
+
+Two tag syntaxes are supported:
+
+```html
+<tg-time unix="1647531900" format="t">22:45</tg-time>
+<time datetime="2022-03-17T22:45:00" format="t">22:45</time>
+```
+
+The `format` attribute is optional and must match `r|w?[dD]?[tT]?`:
+
+| Char | Meaning |
+|------|---------|
+| `r` | Relative time (cannot combine with others) |
+| `w` | Day of the week |
+| `d` | Short date (e.g. "17.03.22") |
+| `D` | Long date (e.g. "March 17, 2022") |
+| `t` | Short time (e.g. "22:45") |
+| `T` | Long time (e.g. "22:45:00") |
+
+When omitted, the underlying text is displayed as-is, but the user can still see the date in their local format.
+
 ## Block entities
 
 The only block entity that Telegram supports are `<pre>` and `<blockquote>`, therefore it is the only tags we support too.
 
 ## `<pre>`
 
-Optionally, language for `<pre>` block can be specified like this:
+Optionally, language for `<pre>` block can be specified in two ways:
 
 ```html
+<!-- mtcute style -->
 <pre language="typescript">export type Foo = 42</pre>
+
+<!-- Bot API style -->
+<pre><code class="language-typescript">export type Foo = 42</code></pre>
 ```
 
 | Code                                                                                | Result (visual)              |
@@ -111,7 +173,7 @@ Overlapping entities are supported in `unparse()`, though.
 
 ## Interpolation
 
-Being a tagged template literal, `html` supports interpolation.
+Both `html` and `thtml` support interpolation as tagged template literals.
 
 You can interpolate one of the following:
 - `string` - **will not** be parsed, and appended to plain text as-is

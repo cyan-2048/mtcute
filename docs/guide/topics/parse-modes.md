@@ -45,7 +45,12 @@ to learn about the syntax.
 
 ## HTML
 
-HTML parser is implemented in `@mtcute/html-parser` package:
+HTML parser is implemented in `@mtcute/html-parser` package. It provides two variants:
+
+### `html` - HTML-like whitespace
+
+Whitespace is collapsed just like in real HTML (newlines and consecutive spaces become a single space).
+Use `<br>` for line breaks and `&nbsp;` for multiple spaces.
 
 ```ts
 import { html } from '@mtcute/html-parser'
@@ -55,10 +60,27 @@ dp.onNewMessage(async (msg) => {
 })
 ```
 
-**Note**: the syntax used by this parser is **not** 
-compatible with Bot API's HTML syntax. 
+### `thtml` - preserved whitespace
+
+Whitespace (spaces and newlines) is kept as-is (Bot API style). 
+Common leading indentation is automatically stripped (dedented), so it's safe to use in indented code.
+
+```ts
+import { thtml } from '@mtcute/html-parser'
+
+dp.onNewMessage(async (msg) => {
+    await msg.answerText(thtml`
+        Hello, <b>${msg.sender.displayName}</b>!
+        Welcome back.
+    `)
+    // text: "Hello, Name!\nWelcome back."
+})
+```
+
+**Note**: Both variants support all Bot API HTML tags. The `html` variant differs from Bot API only in whitespace handling (it collapses whitespace like real HTML). Use `thtml` for full Bot API compatibility.
+
 See [documentation](https://ref.mtcute.dev/modules/_mtcute_html-parser)
-to learn about the syntax.
+to learn more about the syntax.
 
 ## Interpolation
 
@@ -98,10 +120,10 @@ which can be used to convert the message back to the original text:
 ```ts
 import { html } from '@mtcute/html-parser'
 
-const msg = await tg.sendText('Hi, <b>User</b>!', { parseMode: 'html' })
+const msg = await tg.sendText('me', html`Hi, <b>User</b>!`)
 
 console.log(msg.text)
 // Hi, User!
-console.log(html.unparse())
+console.log(html.unparse(msg))
 // Hi, <b>User</b>!
 ```
