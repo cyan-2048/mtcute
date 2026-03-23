@@ -26,23 +26,27 @@ export class WebSocketTransport implements TelegramTransport {
   private _subdomains: Record<string, string>
   private _WebSocket: WebSocketConstructor
 
-  constructor({
-    ws = WebSocket,
-    baseDomain = 'web.telegram.org',
-    subdomains = subdomainsMap,
-  }: {
-    /** Custom implementation of WebSocket (e.g. https://npm.im/ws) */
-    ws?: WebSocketConstructor
-    /** Base WebSocket domain */
-    baseDomain?: string
-    /** Map of sub-domains (key is DC ID, value is string) */
-    subdomains?: Record<string, string>
-  } = {}) {
-    if (!ws) {
-      throw new MtUnsupportedError(
-        'To use WebSocket transport with NodeJS, install `ws` package and pass it to constructor',
-      )
-    }
+    constructor({
+        ws = WebSocket,
+        baseDomain = 'web.telegram.org',
+        subdomains = subdomainsMap,
+    }: {
+        /** Custom implementation of WebSocket (e.g. https://npm.im/ws) */
+        ws?: WebSocketConstructor
+        /** Base WebSocket domain */
+        baseDomain?: string
+        /** Map of sub-domains (key is DC ID, value is string) */
+        subdomains?: Record<string, string>
+    } = {}) {
+        ws = ws ?? WebSocket
+        baseDomain = baseDomain ?? 'web.telegram.org'
+        subdomains = subdomains ?? subdomainsMap
+
+        if (!ws) {
+            throw new MtUnsupportedError(
+                'To use WebSocket transport with NodeJS, install `ws` package and pass it to constructor',
+            )
+        }
 
     // gotta love cjs/esm compat
     if ('default' in ws) {

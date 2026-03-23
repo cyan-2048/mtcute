@@ -1,3 +1,4 @@
+import type { BigInteger } from '@modern-dev/jsbn'
 import type { ICorePlatform } from '../types/platform.js'
 import { hex } from '@fuman/utils'
 
@@ -20,11 +21,7 @@ export class Logger {
 
   prefix = ''
 
-  constructor(
-    readonly mgr: LogManager,
-    readonly tag: string,
-    readonly parent: Logger = mgr,
-  ) {
+  constructor(readonly mgr: LogManager, readonly tag: string, readonly parent: Logger = mgr) {
     let hash = 0
 
     for (let i = 0; i < tag.length; i++) {
@@ -72,7 +69,15 @@ export class Logger {
 
           if (m === '%h') {
             if (ArrayBuffer.isView(val)) return hex.encode(val as Uint8Array)
-            if (typeof val === 'number' || typeof val === 'bigint') return val.toString(16)
+            if (
+              typeof val === 'number'
+              || typeof val === 'bigint'
+              || (typeof val == 'object'
+                && typeof (val as BigInteger).intValue === 'function'
+                && typeof (val as BigInteger).millerRabin === 'function')
+            ) {
+              return (val as any).toString(16)
+            }
 
             return String(val)
           }
@@ -89,7 +94,7 @@ export class Logger {
                 || (typeof v === 'object' && v.type === 'Buffer' && Array.isArray(v.data)) // todo: how can we do this better?
               ) {
                 // eslint-disable-next-line
-                                let str = v.data ? Buffer.from(v.data as number[]).toString('hex') : hex.encode(v)
+                let str = v.data ? Buffer.from(v.data as number[]).toString("hex") : hex.encode(v);
 
                 if (str.length > 300) {
                   str = `${str.slice(0, 300)}...`
@@ -169,8 +174,8 @@ export class LogManager extends Logger {
   constructor(tag = 'base', platform: ICorePlatform) {
     // workaround because we cant pass this to super
     // eslint-disable-next-line ts/no-unsafe-argument
-    super(null as any, tag)
-    ;(this as any).mgr = this
+    super(null as any, tag);
+    (this as any).mgr = this
 
     this.level = platform.getDefaultLogLevel() ?? DEFAULT_LOG_LEVEL
     this.handler = platform.log.bind(platform)

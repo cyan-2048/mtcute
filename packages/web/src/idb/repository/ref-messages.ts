@@ -66,22 +66,37 @@ export class IdbRefMsgRepository implements IReferenceMessagesRepository {
     return txToPromise(tx)
   }
 
-  async deleteByPeer(peerId: number): Promise<void> {
-    const tx = this._driver.db.transaction(TABLE, 'readwrite')
-    const os = tx.objectStore(TABLE)
-    const index = os.index('by_peer')
+  deleteByPeer(peerId: number): Promise<void> {
+    return new Promise((res, err) => {
+      const tx = this._driver.db.transaction(TABLE, 'readwrite')
+      const os = tx.objectStore(TABLE)
+      const index = os.index('by_peer')
 
-    const req = index.openCursor(peerId)
+      const req = index.openCursor(peerId)
 
-    let cursor = await reqToPromise<IDBCursorWithValue | null>(req)
+      req.onerror = () => err(req.error)
 
-    while (cursor) {
-      cursor.delete()
-      cursor.continue()
-      cursor = await reqToPromise<IDBCursorWithValue | null>(req)
-    }
+      req.onsuccess = () => {
+        const cursor = req.result
+        if (!cursor) {
+        // No more entries
+          return
+        }
 
-    return txToPromise(tx)
+        // Delete the current record
+        const deleteReq = cursor.delete()
+
+        deleteReq.onerror = () => err(deleteReq.error)
+        deleteReq.onsuccess = () => {
+        // Continue after delete completes
+          cursor.continue()
+        }
+      }
+
+      tx.oncomplete = () => res()
+      tx.onerror = () => err(tx.error)
+      tx.onabort = () => err(tx.error)
+    })
   }
 
   async deleteAll(): Promise<void> {
