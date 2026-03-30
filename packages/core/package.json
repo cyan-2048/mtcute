@@ -33,6 +33,7 @@
     "long": "catalog:"
   },
   "devDependencies": {
+    "@modern-dev/jsbn": "^1.2.5",
     "@mtcute/test": "workspace:^",
     "@mtcute/tl-utils": "workspace:^"
   }

@@ -85,8 +85,8 @@ export class IdbStorageDriver extends BaseStorageDriver {
     this._pendingWritesOses.add(os)
   }
 
-  async _load(): Promise<void> {
-    this.db = await new Promise((resolve, reject) => {
+  _load(): Promise<void> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
       // indexed db fucking sucks - we can't create tables once we have loaded
       // and making an ever-incrementing version number is pretty hard
       // since migrations are added dynamically.
@@ -103,23 +103,29 @@ export class IdbStorageDriver extends BaseStorageDriver {
 
       const postUpgrade: PostMigrationFunction[] = []
 
-      req.onsuccess = async () => {
+      req.onsuccess = () => {
         // verify that the version number is correct and we didn't have a downgrade
         const db = req.result
         if (db.version !== this.calculateVersion()) {
           const ourRepoCount = this._maxVersion.size
           const dbRepoCount = (db.version - V2_MIGRATIONS_EPOCH) >> 8
           reject(new Error(`IDB version number mismatch. Did some repository get removed? If so, please use \`setRepoCountOverride\` (DB has ${dbRepoCount} repos, but we have ${ourRepoCount})`))
+          return
         }
 
-        try {
-          for (const cb of postUpgrade) {
-            await cb(db)
+        const runPostUpgrade = (idx: number) => {
+          if (idx >= postUpgrade.length) {
+            resolve(db)
+            return
           }
-          resolve(db)
-        } catch (e) {
-          reject(e)
+
+          Promise.resolve(postUpgrade[idx](db)).then(
+            () => runPostUpgrade(idx + 1),
+            err => reject(err),
+          )
         }
+
+        runPostUpgrade(0)
       }
       req.onupgradeneeded = () => {
         // indexed db still fucking sucks. we can't fetch anything from here,
@@ -176,11 +182,13 @@ export class IdbStorageDriver extends BaseStorageDriver {
           doUpgrade(repo, 0)
         }
       }
+    }).then((db) => {
+      this.db = db
     })
   }
 
-  async _save(): Promise<void> {
-    if (this._pendingWritesOses.size === 0) return
+  _save(): Promise<void> {
+    if (this._pendingWritesOses.size === 0) return Promise.resolve()
 
     const writes = this._pendingWrites
     const oses = this._pendingWritesOses
@@ -205,7 +213,7 @@ export class IdbStorageDriver extends BaseStorageDriver {
       }
     }
 
-    await txToPromise(tx)
+    return txToPromise(tx)
   }
 
   _destroy(): void {

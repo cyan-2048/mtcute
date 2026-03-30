@@ -13,13 +13,14 @@
     "./methods.js": "./src/methods.ts"
   },
   "dependencies": {
-    "@mtcute/core": "workspace:^",
-    "@mtcute/wasm": "workspace:^",
     "@fuman/net": "0.0.19",
-    "@fuman/utils": "0.0.19"
+    "@fuman/utils": "0.0.19",
+    "@mtcute/core": "workspace:^",
+    "@mtcute/wasm": "workspace:^"
   },
   "devDependencies": {
-    "@mtcute/test": "workspace:^"
+    "@mtcute/test": "workspace:^",
+    "leemon": "^6.2.0"
   },
   "denoJson": {
     "compilerOptions": {

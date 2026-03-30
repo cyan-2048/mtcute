@@ -11,6 +11,7 @@ const TABLE_TEMP_AUTH_KEYS = 'tempAuthKeys'
 // declare type IDBObjectStore = any
 // declare type IDBValidKey = any
 // declare type IDBRequest<T> = { result: T }
+// declare type IDBCursorWithValue = { key: IDBValidKey, delete: () => void, continue: () => void }
 // </deno-insert>
 
 interface AuthKeyDto {
@@ -34,66 +35,71 @@ export class IdbAuthKeysRepository implements IAuthKeysRepository {
     return this._driver.db.transaction(TABLE_AUTH_KEYS, mode).objectStore(TABLE_AUTH_KEYS)
   }
 
-  async set(dc: number, key: Uint8Array | null): Promise<void> {
+  set(dc: number, key: Uint8Array | null): Promise<void> {
     const os = this.os('readwrite')
 
     if (key === null) {
-      return reqToPromise(os.delete(dc))
+      return reqToPromise(os.delete(dc)).then(() => {})
     }
 
-    await reqToPromise(os.put({ dc, key } satisfies AuthKeyDto))
+    return reqToPromise(os.put({ dc, key } satisfies AuthKeyDto)).then(() => {})
   }
 
-  async get(dc: number): Promise<Uint8Array | null> {
+  get(dc: number): Promise<Uint8Array | null> {
     const os = this.os()
 
     // <deno-tsignore>
-    const it = await reqToPromise<AuthKeyDto>(os.get(dc) as IDBRequest<AuthKeyDto>)
-    if (it === undefined) return null
+    return reqToPromise<AuthKeyDto>(os.get(dc) as IDBRequest<AuthKeyDto>).then((it) => {
+      if (it === undefined) return null
 
-    return it.key
+      return it.key
+    })
   }
 
   private osTemp(mode?: IDBTransactionMode): IDBObjectStore {
     return this._driver.db.transaction(TABLE_TEMP_AUTH_KEYS, mode).objectStore(TABLE_TEMP_AUTH_KEYS)
   }
 
-  async setTemp(dc: number, idx: number, key: Uint8Array | null, expires: number): Promise<void> {
+  setTemp(dc: number, idx: number, key: Uint8Array | null, expires: number): Promise<void> {
     const os = this.osTemp('readwrite')
 
     if (!key) {
-      return reqToPromise(os.delete([dc, idx]))
+      return reqToPromise(os.delete([dc, idx])).then(() => {})
     }
 
-    await reqToPromise(os.put({ dc, idx, key, expiresAt: expires } satisfies TempAuthKeyDto))
+    return reqToPromise(os.put({ dc, idx, key, expiresAt: expires } satisfies TempAuthKeyDto)).then(() => {})
   }
 
-  async getTemp(dc: number, idx: number, now: number): Promise<Uint8Array | null> {
+  getTemp(dc: number, idx: number, now: number): Promise<Uint8Array | null> {
     const os = this.osTemp()
     // <deno-tsignore>
-    const row = await reqToPromise<TempAuthKeyDto>(os.get([dc, idx]) as IDBRequest<TempAuthKeyDto>)
+    return reqToPromise<TempAuthKeyDto>(os.get([dc, idx]) as IDBRequest<TempAuthKeyDto>).then((row) => {
+      if (row === undefined || row.expiresAt! < now) return null
 
-    if (row === undefined || row.expiresAt! < now) return null
-
-    return row.key
+      return row.key
+    })
   }
 
-  async deleteByDc(dc: number): Promise<void> {
+  deleteByDc(dc: number): Promise<void> {
     const tx = this._driver.db.transaction([TABLE_AUTH_KEYS, TABLE_TEMP_AUTH_KEYS], 'readwrite')
 
     tx.objectStore(TABLE_AUTH_KEYS).delete(dc)
 
-    // IndexedDB sucks
     const tempOs = tx.objectStore(TABLE_TEMP_AUTH_KEYS)
-    const keys = await reqToPromise<IDBValidKey[]>(tempOs.getAllKeys())
+    const cursorReq = tempOs.openCursor()
 
-    for (const key of keys) {
-      if ((key as [number, number])[0] === dc) {
-        tempOs.delete(key)
+    cursorReq.onsuccess = () => {
+      const cursor = cursorReq.result as IDBCursorWithValue | null
+      if (!cursor) return
+
+      if ((cursor.key as [number, number])[0] === dc) {
+        cursor.delete()
       }
+
+      cursor.continue()
     }
 
-    await txToPromise(tx)
+    return txToPromise(tx)
   }
 
   deleteAll(): Promise<void> {

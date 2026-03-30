@@ -30,20 +30,21 @@ export class IdbKvRepository implements IKeyValueRepository {
     return this._driver.db.transaction(KV_TABLE, mode).objectStore(KV_TABLE)
   }
 
-  async get(key: string): Promise<Uint8Array | null> {
+  get(key: string): Promise<Uint8Array | null> {
     const os = this.os()
     // <deno-tsignore>
-    const res = await reqToPromise<KeyValueDto>(os.get(key) as IDBRequest<KeyValueDto>)
-    if (res === undefined) return null
+    return reqToPromise<KeyValueDto>(os.get(key) as IDBRequest<KeyValueDto>).then((res) => {
+      if (res === undefined) return null
 
-    return res.value
+      return res.value
+    })
   }
 
-  async delete(key: string): Promise<void> {
-    await reqToPromise(this.os('readwrite').delete(key))
+  delete(key: string): Promise<void> {
+    return reqToPromise(this.os('readwrite').delete(key)).then(() => {})
   }
 
-  async deleteAll(): Promise<void> {
-    await reqToPromise(this.os('readwrite').clear())
+  deleteAll(): Promise<void> {
+    return reqToPromise(this.os('readwrite').clear()).then(() => {})
   }
 }
