@@ -1,7 +1,5 @@
 import { BaseStorageDriver, MtUnsupportedError } from '@mtcute/core'
 
-import { txToPromise } from './utils.js'
-
 export type PostMigrationFunction = (db: IDBDatabase) => Promise<void>
 type MigrationFunction = (db: IDBDatabase) => void | PostMigrationFunction
 
@@ -13,6 +11,13 @@ type MigrationFunction = (db: IDBDatabase) => void | PostMigrationFunction
 
 const REPO_VERSION_PREFIX = '__version:'
 const V2_MIGRATIONS_EPOCH = 2000000000000 // 18-05-2033, i sure hope that by then everyone will have upgraded :3
+
+function isIgnorableIdbError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+
+  const name = 'name' in err ? String(err.name) : ''
+  return name === 'ConstraintError' || name === 'AbortError'
+}
 
 export class IdbStorageDriver extends BaseStorageDriver {
   db!: IDBDatabase
@@ -188,32 +193,80 @@ export class IdbStorageDriver extends BaseStorageDriver {
   }
 
   _save(): Promise<void> {
-    if (this._pendingWritesOses.size === 0) return Promise.resolve()
+    if (this._pendingWrites.length === 0) return Promise.resolve()
 
     const writes = this._pendingWrites
-    const oses = this._pendingWritesOses
     this._pendingWrites = []
     this._pendingWritesOses = new Set()
 
-    const tx = this.db.transaction(oses, 'readwrite')
-
-    const osMap = new Map<string, IDBObjectStore>()
-
-    for (const table of oses) {
-      osMap.set(table, tx.objectStore(table))
-    }
+    let p = Promise.resolve()
 
     for (const [table, obj] of writes) {
-      const os = osMap.get(table)!
-
-      if (obj === null) {
-        os.delete(table)
-      } else {
-        os.put(obj)
-      }
+      p = p.then(() => this._writeCompat(table, obj))
     }
 
-    return txToPromise(tx)
+    return p
+  }
+
+  private _writeCompat(table: string, obj: unknown): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Use a plain array instead of iterable Set to support older Firefox IndexedDB implementations.
+      const tx = this.db.transaction([table], 'readwrite')
+      const os = tx.objectStore(table)
+
+      let settled = false
+      const finishResolve = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      const finishReject = (err: unknown) => {
+        if (settled) return
+        settled = true
+        reject(err)
+      }
+
+      const req = obj === null
+        ? os.delete(table)
+        : os.put(obj)
+
+      req.onerror = (ev) => {
+        const err = req.error
+
+        if (isIgnorableIdbError(err)) {
+          ev.preventDefault()
+          ev.stopPropagation()
+          finishResolve()
+          return
+        }
+
+        finishReject(err)
+      }
+
+      tx.oncomplete = () => {
+        finishResolve()
+      }
+
+      tx.onerror = (ev) => {
+        if (isIgnorableIdbError(tx.error)) {
+          ev.preventDefault()
+          finishResolve()
+          return
+        }
+
+        finishReject(tx.error ?? new Error('IndexedDB transaction error'))
+      }
+
+      tx.onabort = (ev) => {
+        if (isIgnorableIdbError(tx.error)) {
+          ev.preventDefault()
+          finishResolve()
+          return
+        }
+
+        finishReject(tx.error ?? new Error('IndexedDB transaction aborted'))
+      }
+    })
   }
 
   _destroy(): void {
