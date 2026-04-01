@@ -10,9 +10,7 @@ export class WebCryptoProvider implements ICryptoProvider {
   async initialize(): Promise<void> {
     // @ts-expect-error kaios version check
     // eslint-disable-next-line eqeqeq
-    const isKai3 = import.meta.env.KAIOS == 3
-
-    if (isKai3) {
+    if (import.meta.env.KAIOS == 3) {
       const m = await import('./wasm/crypto.js')
       this.instance = new m.WebCryptoProvider()
     } else {

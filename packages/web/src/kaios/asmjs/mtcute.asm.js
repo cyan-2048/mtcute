@@ -1,4 +1,3 @@
-
 var Module = (function() {
   var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
   
@@ -43,10 +42,6 @@ a.run=Z;noExitRuntime=!0;Z();
 }
 );
 })();
-if (typeof exports === 'object' && typeof module === 'object')
-      module.exports = Module;
-    else if (typeof define === 'function' && define['amd'])
-      define([], function() { return Module; });
-    else if (typeof exports === 'object')
-      exports["Module"] = Module;
+
+export default Module;
     

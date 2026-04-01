@@ -6,9 +6,6 @@ import { gunzipSync, gzipSync } from './fflate.js'
 
 // #region asm.js bindings
 
-import MtcuteMemURL from './mtcute.asm.js.mem?url'
-import MtcuteAsmURL from './mtcute.asm.js?url'
-
 let asm: any = null
 
 let compressor!: number
@@ -28,24 +25,13 @@ function getAvailableMemory() {
 }
 
 async function loadAsm() {
-  if (import.meta.env.DEV) {
-    const { factory } = await import('./mtcute.asm.dev')
-    asm = await factory({
-      locateFile() {
-        return MtcuteMemURL
-      },
-    })
-  } else {
-    // TODO: stop using systemjs and completely migrate to rsbuild/webpack
-    // @ts-expect-error: system.js only found in kaigram
-    const factory = (await System.import(MtcuteAsmURL)).default
+  const factory = (await import('./mtcute.asm.js')).default
 
-    asm = await factory({
-      locateFile() {
-        return MtcuteMemURL
-      },
-    })
-  }
+  asm = await factory({
+    locateFile() {
+      return new URL('./mtcute.asm.js.mem', import.meta.url).href
+    },
+  })
 }
 
 const ALGO_TO_SUBTLE: Record<string, string> = {
