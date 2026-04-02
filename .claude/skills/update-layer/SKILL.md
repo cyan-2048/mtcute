@@ -25,7 +25,6 @@ Parse the output. It contains:
 - **LAYER** - the final layer number
 - **CONFLICTS** - entries needing manual resolution (with numbered options)
 - **DOCS** - whether cached documentation is available
-- **VERSION** - current version and suggested bump
 
 ### 2. Resolve and run
 
@@ -35,12 +34,9 @@ Build flags from the dry-run output:
 pnpm tsx scripts/tl/fetch-api.ts \
   --resolve entryName=N \    # 0=remove, 1+ = pick option from dry-run. repeat per conflict
   --docs cached|fresh \      # use cached docs if available, or force re-fetch
-  --bump                     # or --no-bump
 ```
 
 You should pass `--docs fresh` when one of the Core/Corefork/Blogfork schemas was updated, but the cached docs are still on an older layer.
-
-In most cases you should pass `--bump`, except when running again within the same run (e.g. to fix int53 types).
 
 ### 3. Process diff
 
@@ -100,7 +96,7 @@ Based on the diff, update these files for new/changed TL types:
 > Note: all these tasks may take a long time, use timeout=5m for each to avoid issues
 
 ```bash
-# typecheck and fix any type errors
+# typecheck and fix any type errors (note: workspace-wide `tsc` is broken, avoid using it, use `lint:tsc` script instead)
 pnpm run -w lint:tsc
 
 # run eslint, fix any remaining linting issues
