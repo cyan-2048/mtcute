@@ -1,7 +1,7 @@
 {
   "name": "@mtcute/e2e-tests",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.30.0",
   "private": true,
   "fuman": {
     "private": true
@@ -17,7 +17,7 @@
     "mtcute": "file:../packages/node",
     "tsx": "^4.19.2",
     "esbuild": "^0.24.0",
-    "better-sqlite3": "12.4.1"
+    "better-sqlite3": "12.10.0"
   },
   "devDependencies": {
     "@types/chai": "^4.3.8",
