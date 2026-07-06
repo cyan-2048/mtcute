@@ -28,37 +28,37 @@ export class IdbPeersRepository implements IPeersRepository {
     return this._driver.db.transaction(TABLE, mode).objectStore(TABLE)
   }
 
-  async getById(id: number): Promise<IPeersRepository.PeerInfo | null> {
+  getById(id: number): Promise<IPeersRepository.PeerInfo | null> {
     // <deno-tsignore>
-    const it = await reqToPromise(this.os().get(id) as IDBRequest<IPeersRepository.PeerInfo>)
+    return reqToPromise(this.os().get(id) as IDBRequest<IPeersRepository.PeerInfo>).then((it) => {
+      if (!it) return null
+      // NB: older objects might not have isMin field
+      if (!('isMin' in it)) (it as any).isMin = false
 
-    if (!it) return null
-    // NB: older objects might not have isMin field
-    if (!('isMin' in it)) (it as any).isMin = false
-
-    return it
+      return it
+    })
   }
 
-  async getByUsername(username: string): Promise<IPeersRepository.PeerInfo | null> {
+  getByUsername(username: string): Promise<IPeersRepository.PeerInfo | null> {
     // <deno-tsignore>
-    const it = await reqToPromise(
+    return reqToPromise(
       this.os().index('by_username').get(username) as IDBRequest<IPeersRepository.PeerInfo>,
-    )
+    ).then((it) => {
+      // NB: older objects might not have isMin field
+      if (!it || it.isMin) return null
 
-    // NB: older objects might not have isMin field
-    if (!it || it.isMin) return null
-
-    return it
+      return it
+    })
   }
 
-  async getByPhone(phone: string): Promise<IPeersRepository.PeerInfo | null> {
+  getByPhone(phone: string): Promise<IPeersRepository.PeerInfo | null> {
     // <deno-tsignore>
-    const it = await reqToPromise(this.os().index('by_phone').get(phone) as IDBRequest<IPeersRepository.PeerInfo>)
+    return reqToPromise(this.os().index('by_phone').get(phone) as IDBRequest<IPeersRepository.PeerInfo>).then((it) => {
+      // NB: older objects might not have isMin field
+      if (!it || it.isMin) return null
 
-    // NB: older objects might not have isMin field
-    if (!it || it.isMin) return null
-
-    return it
+      return it
+    })
   }
 
   deleteAll(): Promise<void> {

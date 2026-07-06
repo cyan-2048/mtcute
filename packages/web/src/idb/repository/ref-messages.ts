@@ -32,59 +32,68 @@ export class IdbRefMsgRepository implements IReferenceMessagesRepository {
     return this._driver.db.transaction(TABLE, mode).objectStore(TABLE)
   }
 
-  async store(peerId: number, chatId: number, msgId: number): Promise<void> {
+  store(peerId: number, chatId: number, msgId: number): Promise<void> {
     const os = this.os('readwrite')
 
-    await reqToPromise(os.put({ peerId, chatId, msgId } satisfies MessageRefDto))
+    return reqToPromise(os.put({ peerId, chatId, msgId } satisfies MessageRefDto)).then(() => {})
   }
 
-  async getByPeer(peerId: number): Promise<[number, number] | null> {
+  getByPeer(peerId: number): Promise<[number, number] | null> {
     const os = this.os()
     const index = os.index('by_peer')
 
     // <deno-tsignore>
-    const it = await reqToPromise<MessageRefDto>(index.get(peerId) as IDBRequest<MessageRefDto>)
-    if (!it) return null
+    return reqToPromise<MessageRefDto>(index.get(peerId) as IDBRequest<MessageRefDto>).then((it) => {
+      if (!it) return null
 
-    return [it.chatId, it.msgId]
+      return [it.chatId, it.msgId]
+    })
   }
 
-  async delete(chatId: number, msgIds: number[]): Promise<void> {
+  delete(chatId: number, msgIds: number[]): Promise<void> {
     const tx = this._driver.db.transaction(TABLE, 'readwrite')
     const os = tx.objectStore(TABLE)
     const index = os.index('by_msg')
 
-    for (const msgId of msgIds) {
-      const keys = await reqToPromise<IDBValidKey[]>(index.getAllKeys([chatId, msgId]))
+    let idx = 0
+    const processNext = () => {
+      if (idx >= msgIds.length) return
 
-      // there are never that many keys, so we can avoid using cursor
-      for (const key of keys) {
-        os.delete(key)
+      const req = index.getAllKeys([chatId, msgIds[idx++]])
+      req.onsuccess = () => {
+        const keys = req.result as IDBValidKey[]
+        for (const key of keys) {
+          os.delete(key)
+        }
+
+        processNext()
       }
     }
+
+    processNext()
 
     return txToPromise(tx)
   }
 
-  async deleteByPeer(peerId: number): Promise<void> {
+  deleteByPeer(peerId: number): Promise<void> {
     const tx = this._driver.db.transaction(TABLE, 'readwrite')
     const os = tx.objectStore(TABLE)
     const index = os.index('by_peer')
 
     const req = index.openCursor(peerId)
 
-    let cursor = await reqToPromise<IDBCursorWithValue | null>(req)
+    req.onsuccess = () => {
+      const cursor = req.result as IDBCursorWithValue | null
+      if (!cursor) return
 
-    while (cursor) {
       cursor.delete()
       cursor.continue()
-      cursor = await reqToPromise<IDBCursorWithValue | null>(req)
     }
 
     return txToPromise(tx)
   }
 
-  async deleteAll(): Promise<void> {
-    await reqToPromise(this.os('readwrite').clear())
+  deleteAll(): Promise<void> {
+    return reqToPromise(this.os('readwrite').clear())
   }
 }

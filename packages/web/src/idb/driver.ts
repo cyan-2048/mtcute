@@ -179,15 +179,15 @@ export class IdbStorageDriver extends BaseStorageDriver {
     })
   }
 
-  async _save(): Promise<void> {
-    if (this._pendingWritesOses.size === 0) return
+  _save(): Promise<void> {
+    if (this._pendingWritesOses.size === 0) return Promise.resolve()
 
     const writes = this._pendingWrites
     const oses = this._pendingWritesOses
     this._pendingWrites = []
     this._pendingWritesOses = new Set()
 
-    const tx = this.db.transaction(oses, 'readwrite')
+    const tx = this.db.transaction([...oses], 'readwrite')
 
     const osMap = new Map<string, IDBObjectStore>()
 
@@ -205,7 +205,7 @@ export class IdbStorageDriver extends BaseStorageDriver {
       }
     }
 
-    await txToPromise(tx)
+    return txToPromise(tx)
   }
 
   _destroy(): void {

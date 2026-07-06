@@ -8,8 +8,8 @@ import {
   TelegramClient as TelegramClientBase,
 } from '@mtcute/core/client.js'
 
-import { WebCryptoProvider } from './crypto.js'
 import { IdbStorage } from './idb/index.js'
+import { WebCryptoProvider } from './kaios/index.js'
 import { WebPlatform } from './platform.js'
 import { WebSocketTransport } from './websocket.js'
 

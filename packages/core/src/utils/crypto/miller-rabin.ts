@@ -1,44 +1,55 @@
 import type { ICryptoProvider } from './abstract.js'
 
-import { bigint } from '@fuman/utils'
+import { bitLength, modPowBinary, randomBigIntBits, twoMultiplicity } from '../bigint-utils.js'
+import BigInteger from '../bigint/BigInteger.js'
 
-import { randomBigIntBits } from '../bigint-utils.js'
+const BIGINT_ZERO = BigInteger.BigInt(0)
+const BIGINT_ONE = BigInteger.BigInt(1)
+const BIGINT_TWO = BigInteger.BigInt(2)
+const BIGINT_FOUR = BigInteger.BigInt(4)
 
-export function millerRabin(crypto: ICryptoProvider, n: bigint, rounds = 20): boolean {
+export function millerRabin(crypto: ICryptoProvider, n: BigInteger, rounds = 20): boolean {
   // small numbers: 0, 1 are not prime, 2, 3 are prime
-  if (n < 4n) return n > 1n
-  if (n % 2n === 0n || n < 0n) return false
+  if (BigInteger.lessThan(n, BIGINT_FOUR)) {
+    return BigInteger.greaterThan(n, BIGINT_ONE)
+  }
+  if (
+    BigInteger.equal(BigInteger.remainder(n, BIGINT_TWO), BIGINT_ZERO)
+    || BigInteger.lessThan(n, BIGINT_ZERO)
+  ) {
+    return false
+  }
 
-  const nBits = bigint.bitLength(n)
-  const nSub = n - 1n
+  const nBits = bitLength(n)
+  const nSub = BigInteger.subtract(n, BIGINT_ONE)
 
-  const r = bigint.twoMultiplicity(nSub)
-  const d = nSub >> r
+  const r = twoMultiplicity(nSub)
+  const d = BigInteger.signedRightShift(nSub, r)
 
-  for (let i = 0; i < rounds; i++) {
-    let base
+  for (let round = 0; round < rounds; round++) {
+    let base: BigInteger
 
     do {
       base = randomBigIntBits(crypto, nBits)
-    } while (base <= 1n || base >= nSub)
+    } while (BigInteger.lessThanOrEqual(base, BIGINT_ONE) || BigInteger.greaterThanOrEqual(base, nSub))
 
-    let x = bigint.modPowBinary(base, d, n)
-    if (x === 1n || x === nSub) continue
+    let x = modPowBinary(base, d, n)
+    if (BigInteger.equal(x, BIGINT_ONE) || BigInteger.equal(x, nSub)) continue
 
-    let i = 0n
-    let y: bigint
+    let i = BIGINT_ZERO
+    let y: BigInteger
 
-    while (i < r) {
-      y = bigint.modPowBinary(x, 2n, n)
+    while (BigInteger.lessThan(i, r)) {
+      y = modPowBinary(x, BIGINT_TWO, n)
 
-      if (x === 1n) return false
-      if (x === nSub) break
-      i += 1n
+      if (BigInteger.equal(x, BIGINT_ONE)) return false
+      if (BigInteger.equal(x, nSub)) break
+      i = BigInteger.add(i, BIGINT_ONE)
 
       x = y
     }
 
-    if (i === r) return false
+    if (BigInteger.equal(i, r)) return false
   }
 
   return true

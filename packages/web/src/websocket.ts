@@ -38,6 +38,7 @@ export class WebSocketTransport implements TelegramTransport {
     /** Map of sub-domains (key is DC ID, value is string) */
     subdomains?: Record<string, string>
   } = {}) {
+    subdomains ||= subdomainsMap
     if (!ws) {
       throw new MtUnsupportedError(
         'To use WebSocket transport with NodeJS, install `ws` package and pass it to constructor',

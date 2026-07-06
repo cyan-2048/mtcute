@@ -19,7 +19,8 @@
     "@fuman/utils": "0.0.20"
   },
   "devDependencies": {
-    "@mtcute/test": "workspace:^"
+    "@mtcute/test": "workspace:^",
+    "leemon": "^6.2.0"
   },
   "denoJson": {
     "compilerOptions": {
