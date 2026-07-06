@@ -1,17 +1,18 @@
 {
   "name": "@mtcute/e2e-tests",
   "type": "module",
-  "version": "0.30.0",
+  "version": "0.30.3",
   "private": true,
   "fuman": {
     "private": true
   },
   "scripts": {
     "test": "dotenv tsx --trace-warnings --test --test-timeout=300000",
-    "test:all": "find tests -type f -name '*.e2e.ts' -print0 | sort -z | xargs -0 -n1 pnpm run test"
+    "test:all": "find tests -type f -name '*.e2e.ts' -print0 | sort -z | xargs -0 -n1 pnpm run test",
+    "test:bun": "bun test --tsconfig-override=./tsconfig.bun.json --timeout 300000 ./tests/*.e2e.ts"
   },
   "dependencies": {
-    "@fuman/utils": "0.0.1",
+    "@fuman/utils": "0.0.20",
     "chai": "^4.3.10",
     "dotenv-cli": "7.4.4",
     "mtcute": "file:../packages/node",

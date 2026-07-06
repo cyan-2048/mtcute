@@ -1,7 +1,7 @@
 {
   "name": "@mtcute/web",
   "type": "module",
-  "version": "0.30.1",
+  "version": "0.30.3",
   "private": true,
   "description": "Meta-package for the web platform",
   "author": "alina sireneva <alina@tei.su>",
@@ -13,10 +13,10 @@
     "./methods.js": "./src/methods.ts"
   },
   "dependencies": {
-    "@fuman/net": "0.0.19",
-    "@fuman/utils": "0.0.19",
     "@mtcute/core": "workspace:^",
-    "@mtcute/wasm": "workspace:^"
+    "@mtcute/wasm": "workspace:^",
+    "@fuman/net": "0.0.20",
+    "@fuman/utils": "0.0.20"
   },
   "devDependencies": {
     "@mtcute/test": "workspace:^",

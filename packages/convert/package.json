@@ -1,7 +1,7 @@
 {
   "name": "@mtcute/convert",
   "type": "module",
-  "version": "0.30.1",
+  "version": "0.30.3",
   "private": true,
   "description": "Cross-library session conversion utilities",
   "author": "alina sireneva <alina@tei.su>",
@@ -10,9 +10,9 @@
   "exports": "./src/index.ts",
   "dependencies": {
     "@mtcute/core": "workspace:^",
-    "@fuman/utils": "0.0.19",
-    "@fuman/net": "0.0.19",
-    "@fuman/io": "0.0.19"
+    "@fuman/utils": "0.0.20",
+    "@fuman/net": "0.0.20",
+    "@fuman/io": "0.0.20"
   },
   "peerDependencies": {
     "@mtcute/node": "workspace:^"

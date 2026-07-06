@@ -15,6 +15,7 @@ export default antfu({
     'e2e/deno/.jsr-data',
     'e2e/node/.verdaccio',
     '.claude/skills/**',
+    '.agents/skills/**',
   ],
   typescript: process.env.CI
     ? {
@@ -119,4 +120,12 @@ export default antfu({
   // rules: {
   //     'import/extensions': 'off',
   // },
+}, {
+  files: ['**/*.test.ts'],
+  rules: {
+    'ts/no-unsafe-assignment': 'off',
+    'ts/no-unsafe-argument': 'off',
+    'ts/no-unsafe-return': 'off',
+    'ts/no-unsafe-call': 'off',
+  },
 })
