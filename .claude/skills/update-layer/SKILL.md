@@ -106,6 +106,8 @@ pnpm run -w lint:ci --fix
 pnpm run -w test
 ```
 
+Where possible, test your changes with a real session, to validate server-side invariants are upheld.
+
 ### 10. Summary
 
 - Present the summary of changes in the schema to the user

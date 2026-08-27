@@ -188,6 +188,9 @@
     "importedContact": [
       "user_id"
     ],
+    "inlineButtonTypeUserProfile": [
+      "user_id"
+    ],
     "inputChannel": [
       "channel_id"
     ],
@@ -251,6 +254,9 @@
     ],
     "messageActionChatJoinedByLink": [
       "inviter_id"
+    ],
+    "messageActionChatJoinedViaCommunity": [
+      "community_id"
     ],
     "messageActionChatMigrateTo": [
       "channel_id"

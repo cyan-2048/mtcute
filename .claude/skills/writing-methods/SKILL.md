@@ -67,7 +67,16 @@ export interface DeleteMessagesParams { ... }
 ```
 
 ### `// @available=user|bot|both`
-Controls the `**Available**:` JSDoc annotation. If absent, auto-detected from which TL methods are called. Do not add on your own.
+Controls the `**Available**:` JSDoc annotation. If absent, auto-detected from which TL methods are called.
+
+Add it explicitly when auto-detection is wrong or has nothing to go on (the schema
+carries no availability data for some namespaces, e.g. `ephemeral.*`). Prefer this
+over documenting the constraint in prose.
+
+```ts
+// @available=user
+export async function getWelcomeMessages(...) { ... }
+```
 
 ### `// @alias=name1,name2`
 Creates additional class method aliases.

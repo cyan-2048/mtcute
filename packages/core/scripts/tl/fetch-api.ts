@@ -43,6 +43,7 @@ import {
   COMPAT_TL_FILE,
   CORE_DOMAIN,
   COREFORK_DOMAIN,
+  LEGACY_CTORS_TO_KEEP,
   TDESKTOP_LAYER,
   TDESKTOP_SCHEMA,
   TDLIB_SCHEMA,
@@ -416,7 +417,7 @@ async function main(): Promise<void> {
   // collect conflicts during merge
   const conflicts: CollectedConflict[] = []
 
-  const resultSchema = await mergeTlSchemas(
+  const mergedSchema = await mergeTlSchemas(
     schemas.map(it => it.content),
     async (_options, reason) => {
       const options: ConflictOption[] = _options.map((it, idx) => ({
@@ -490,9 +491,11 @@ async function main(): Promise<void> {
     },
   )
 
-  console.log('Done merging! Final schema contains %d entries', resultSchema.entries.length)
-
-  // warn about removed constructors
+  // drop constructors that are no longer present at the final layer.
+  //
+  // sources lagging behind (e.g. Core) still define them, but they are gone from the API,
+  // so keeping them would offer users constructors the server will reject. they remain
+  // readable via compat.tl, to which the diff below adds them automatically.
   const latestLayerCtors = new Set<string>()
   for (const schema of schemas) {
     if (schema.layer !== resultLayer) continue
@@ -501,18 +504,29 @@ async function main(): Promise<void> {
     }
   }
 
-  const warned = new Set<string>(['inputPeerPhotoFileLocationLegacy', 'inputStickerSetThumbLegacy'])
+  const customCtors = new Set<string>()
   for (const schema of schemas) {
-    if (schema.layer === resultLayer) continue
-    if (schema.name === 'Custom') continue
-
+    if (schema.name !== 'Custom') continue
     for (const entry of schema.content.entries) {
-      if (!latestLayerCtors.has(entry.name) && !warned.has(entry.name)) {
-        console.log(`[warn] Constructor ${entry.name} was seemingly removed in layer ${resultLayer}, but still present in ${schema.name}`)
-        warned.add(entry.name)
-      }
+      customCtors.add(entry.name)
     }
   }
+
+  const staleCtors = new Set<string>()
+  for (const entry of mergedSchema.entries) {
+    if (latestLayerCtors.has(entry.name)) continue
+    if (customCtors.has(entry.name)) continue
+    if (LEGACY_CTORS_TO_KEEP.has(entry.name)) continue
+
+    staleCtors.add(entry.name)
+    console.log(`[warn] Dropping ${entry.name}: removed in layer ${resultLayer}, but still present in an older schema`)
+  }
+
+  const resultSchema = staleCtors.size
+    ? parseFullTlSchema(mergedSchema.entries.filter(it => !staleCtors.has(it.name)))
+    : mergedSchema
+
+  console.log('Done merging! Final schema contains %d entries', resultSchema.entries.length)
 
   // check docs availability
   const cachedDocs = await getCachedDocumentation()

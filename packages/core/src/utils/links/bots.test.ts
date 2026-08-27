@@ -92,6 +92,26 @@ describe('Deep links', () => {
         admin: ['postStories'],
       })
     })
+
+    it('should round-trip direct messages and ranks admin rights', () => {
+      expect(links.botAddToGroup({ bot: 'bot_username', admin: ['manageDirectMessages', 'manageRanks'] })).eq(
+        'https://t.me/bot_username?startgroup&admin=manage_direct_messages%2Bmanage_tags',
+      )
+      expect(
+        links.botAddToGroup.parse('https://t.me/bot_username?startgroup&admin=manage_direct_messages+manage_tags'),
+      ).eql({
+        bot: 'bot_username',
+        parameter: undefined,
+        admin: ['manageDirectMessages', 'manageRanks'],
+      })
+      expect(
+        links.botAddToGroup.parse('https://t.me/bot_username?startgroup&admin=manage_direct_messages%2Bmanage_tags'),
+      ).eql({
+        bot: 'bot_username',
+        parameter: undefined,
+        admin: ['manageDirectMessages', 'manageRanks'],
+      })
+    })
   })
 
   describe('Bot add to channel links', () => {

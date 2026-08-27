@@ -45,8 +45,10 @@ You can only use the following button types with reply keyboards:
 | Request contact     | `BotKeyboard.requestContact` | only for private chats. |
 | Request geolocation | `BotKeyboard.requestGeo`     | only for private chats. |
 | Request poll        | `BotKeyboard.requestPoll`    | only for private chats. |
+| Request peer        | `BotKeyboard.requestPeer`    | When clicked the client will ask the user to choose a peer and will send a message with [`ActionPeerChosen`](https://ref.mtcute.dev/interfaces/_mtcute_core.index.ActionPeerChosen) |
+| WebView             | `BotKeyboard.webView`        | [Learn more](https://corefork.telegram.org/api/bots/webapps) |
 
-Using any other will result in an error by Telegram.
+Using any other is a type error (and will throw at runtime).
 
 You can also instruct the client to hide a previously
 sent reply keyboard:
@@ -99,20 +101,36 @@ You can only use the following button types with inline keyboards:
 | Seamless login | `BotKeyboard.urlAuth`      | [Learn more](https://corefork.telegram.org/constructor/inputKeyboardButtonUrlAuth)  |
 | WebView        | `BotKeyboard.webView`      | [Learn more](https://corefork.telegram.org/api/bots/webapps)                        |
 | Open user      | `BotKeyboard.userProfile`  | When clicked the client will open the given user's profile                          |
-| Request peer   | `BotKeyboard.requestPeer`  | When clicked the client will ask the user to choose a peer and will send a message with [`ActionPeerChosen`](https://ref.mtcute.dev/interfaces/_mtcute_core.index.ActionPeerChosen) |
+| Copy text      | `BotKeyboard.copy`         | When clicked the client will copy the given text to the clipboard                   |
+| Disabled       | `BotKeyboard.disabled`     | Does nothing when clicked                                                           |
 
-Using any other will result in an error by Telegram.
+Using any other is a type error (and will throw at runtime).
+
+Buttons are plain objects, and raw TL objects are accepted anywhere a button
+is expected: `keyboardButton` in reply keyboards, `keyboardInlineButton` in
+inline keyboards and rich messages.
+
+The same buttons can also be used in rich messages, via `Rich.buttonRow`
+(a row of buttons) and `Rich.textButton` (a button inside rich text):
+
+```ts
+Rich.buttonRow([
+    BotKeyboard.url('Open', 'https://example.com'),
+    BotKeyboard.copy({ text: 'Copy', copyText: 'copied!' }),
+], { align: 'center' })
+```
 
 ## Keyboard builder
 
 Sometimes 2D array is a bit too low-level, and thus mtcute provides an
 easy-to-use builder for the keyboards.
 
-Once created using `BotKeyboard.builder()`, you can `push` buttons there,
-and then get it either `asInline` or `asReply`:
+Use `BotKeyboard.builder()` for inline keyboards and `BotKeyboard.replyBuilder()`
+for reply ones, `push` buttons there, and then get the markup with `asInline`
+or `asReply` respectively:
 
 ```ts
-const markup = BotKeyboard.builder()
+const markup = BotKeyboard.replyBuilder()
     .push(BotKeyboard.text('Button 1'))
     .push(BotKeyboard.text('Button 2'))
     .asReply()
@@ -125,7 +143,7 @@ const markup = BotKeyboard.builder()
 You can also push a button conditionally, or even use a function:
 
 ```ts
-const markup = BotKeyboard.builder()
+const markup = BotKeyboard.replyBuilder()
     .push(BotKeyboard.text('Button 1'))
     .push(isAdmin && BotKeyboard.text('Button 2'))
     .push(() => BotKeyboard.text('Button 3'))
@@ -141,7 +159,7 @@ When `push`-ing multiple buttons at once, they will be wrapped after a certain
 number of buttons added (default: 3):
 
 ```ts
-const markup = BotKeyboard.builder()
+const markup = BotKeyboard.replyBuilder()
     .push(
         BotKeyboard.text('Button 1'),
         BotKeyboard.text('Button 2'),
@@ -158,13 +176,13 @@ const markup = BotKeyboard.builder()
 Or, you can add entire rows at once without them getting wrapped
 (and even populate them from a function!):
 ```ts
-const markup = BotKeyboard.builder()
-    .row(
+const markup = BotKeyboard.replyBuilder()
+    .row([
         BotKeyboard.text('1'),
         BotKeyboard.text('2'),
         BotKeyboard.text('3'),
         BotKeyboard.text('4'),
-    )
+    ])
     .row((row) => {
         for (let i = 5; i <= 8; i++ ) {
             row.push(BotKeyboard.text(`${i}`))

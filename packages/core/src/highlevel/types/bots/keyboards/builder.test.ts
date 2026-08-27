@@ -1,3 +1,4 @@
+import type { InputReplyKeyboardButton } from './types.js'
 import { describe, expect, it } from 'vitest'
 
 import { BotKeyboardBuilder } from './builder.js'
@@ -8,18 +9,18 @@ describe('BotKeyboardBuilder', () => {
       const builder = new BotKeyboardBuilder()
 
       builder.push(
-        { _: 'keyboardButton', text: '1' },
-        { _: 'keyboardButton', text: '2' },
-        { _: 'keyboardButton', text: '3' },
+        { type: 'disabled', text: '1' },
+        { type: 'disabled', text: '2' },
+        { type: 'disabled', text: '3' },
       )
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
         buttons: [
           [
-            { _: 'keyboardButton', text: '1' },
-            { _: 'keyboardButton', text: '2' },
-            { _: 'keyboardButton', text: '3' },
+            { type: 'disabled', text: '1' },
+            { type: 'disabled', text: '2' },
+            { type: 'disabled', text: '3' },
           ],
         ],
       })
@@ -29,21 +30,21 @@ describe('BotKeyboardBuilder', () => {
       const builder = new BotKeyboardBuilder(3)
 
       builder.push(
-        { _: 'keyboardButton', text: '1' },
-        { _: 'keyboardButton', text: '2' },
-        { _: 'keyboardButton', text: '3' },
-        { _: 'keyboardButton', text: '4' },
+        { type: 'disabled', text: '1' },
+        { type: 'disabled', text: '2' },
+        { type: 'disabled', text: '3' },
+        { type: 'disabled', text: '4' },
       )
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
         buttons: [
           [
-            { _: 'keyboardButton', text: '1' },
-            { _: 'keyboardButton', text: '2' },
-            { _: 'keyboardButton', text: '3' },
+            { type: 'disabled', text: '1' },
+            { type: 'disabled', text: '2' },
+            { type: 'disabled', text: '3' },
           ],
-          [{ _: 'keyboardButton', text: '4' }],
+          [{ type: 'disabled', text: '4' }],
         ],
       })
     })
@@ -51,16 +52,16 @@ describe('BotKeyboardBuilder', () => {
     it('should always add a new row', () => {
       const builder = new BotKeyboardBuilder(3)
 
-      builder.push({ _: 'keyboardButton', text: '1' })
-      builder.push({ _: 'keyboardButton', text: '2' })
-      builder.push({ _: 'keyboardButton', text: '3' })
+      builder.push({ type: 'disabled', text: '1' })
+      builder.push({ type: 'disabled', text: '2' })
+      builder.push({ type: 'disabled', text: '3' })
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
         buttons: [
-          [{ _: 'keyboardButton', text: '1' }],
-          [{ _: 'keyboardButton', text: '2' }],
-          [{ _: 'keyboardButton', text: '3' }],
+          [{ type: 'disabled', text: '1' }],
+          [{ type: 'disabled', text: '2' }],
+          [{ type: 'disabled', text: '3' }],
         ],
       })
     })
@@ -68,13 +69,13 @@ describe('BotKeyboardBuilder', () => {
     it('should accept functions and falsy values', () => {
       const builder = new BotKeyboardBuilder(3)
 
-      builder.push({ _: 'keyboardButton', text: '1' })
-      builder.push(() => ({ _: 'keyboardButton', text: '2' }))
-      builder.push(0 > 1 && { _: 'keyboardButton', text: '3' })
+      builder.push({ type: 'disabled', text: '1' })
+      builder.push(() => ({ type: 'disabled', text: '2' }))
+      builder.push(0 > 1 && { type: 'disabled', text: '3' })
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
-        buttons: [[{ _: 'keyboardButton', text: '1' }], [{ _: 'keyboardButton', text: '2' }]],
+        buttons: [[{ type: 'disabled', text: '1' }], [{ type: 'disabled', text: '2' }]],
       })
     })
   })
@@ -83,20 +84,20 @@ describe('BotKeyboardBuilder', () => {
     it('should append (or wrap) to the last row', () => {
       const builder = new BotKeyboardBuilder(3)
 
-      builder.append({ _: 'keyboardButton', text: '1' })
-      builder.append({ _: 'keyboardButton', text: '2' })
-      builder.append({ _: 'keyboardButton', text: '3' })
-      builder.append({ _: 'keyboardButton', text: '4' })
+      builder.append({ type: 'disabled', text: '1' })
+      builder.append({ type: 'disabled', text: '2' })
+      builder.append({ type: 'disabled', text: '3' })
+      builder.append({ type: 'disabled', text: '4' })
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
         buttons: [
           [
-            { _: 'keyboardButton', text: '1' },
-            { _: 'keyboardButton', text: '2' },
-            { _: 'keyboardButton', text: '3' },
+            { type: 'disabled', text: '1' },
+            { type: 'disabled', text: '2' },
+            { type: 'disabled', text: '3' },
           ],
-          [{ _: 'keyboardButton', text: '4' }],
+          [{ type: 'disabled', text: '4' }],
         ],
       })
     })
@@ -104,16 +105,16 @@ describe('BotKeyboardBuilder', () => {
     it('accept functions and falsy values', () => {
       const builder = new BotKeyboardBuilder(3)
 
-      builder.append({ _: 'keyboardButton', text: '1' })
-      builder.append(() => ({ _: 'keyboardButton', text: '2' }))
-      builder.append(0 > 1 && { _: 'keyboardButton', text: '3' })
+      builder.append({ type: 'disabled', text: '1' })
+      builder.append(() => ({ type: 'disabled', text: '2' }))
+      builder.append(0 > 1 && { type: 'disabled', text: '3' })
 
       expect(builder.asInline()).toEqual({
         type: 'inline',
         buttons: [
           [
-            { _: 'keyboardButton', text: '1' },
-            { _: 'keyboardButton', text: '2' },
+            { type: 'disabled', text: '1' },
+            { type: 'disabled', text: '2' },
           ],
         ],
       })
@@ -123,24 +124,24 @@ describe('BotKeyboardBuilder', () => {
   it('should accept custom row size', () => {
     const builder = new BotKeyboardBuilder(5)
 
-    builder.append({ _: 'keyboardButton', text: '1' })
-    builder.append({ _: 'keyboardButton', text: '2' })
-    builder.append({ _: 'keyboardButton', text: '3' })
-    builder.append({ _: 'keyboardButton', text: '4' })
-    builder.append({ _: 'keyboardButton', text: '5' })
-    builder.append({ _: 'keyboardButton', text: '6' })
+    builder.append({ type: 'disabled', text: '1' })
+    builder.append({ type: 'disabled', text: '2' })
+    builder.append({ type: 'disabled', text: '3' })
+    builder.append({ type: 'disabled', text: '4' })
+    builder.append({ type: 'disabled', text: '5' })
+    builder.append({ type: 'disabled', text: '6' })
 
     expect(builder.asInline()).toEqual({
       type: 'inline',
       buttons: [
         [
-          { _: 'keyboardButton', text: '1' },
-          { _: 'keyboardButton', text: '2' },
-          { _: 'keyboardButton', text: '3' },
-          { _: 'keyboardButton', text: '4' },
-          { _: 'keyboardButton', text: '5' },
+          { type: 'disabled', text: '1' },
+          { type: 'disabled', text: '2' },
+          { type: 'disabled', text: '3' },
+          { type: 'disabled', text: '4' },
+          { type: 'disabled', text: '5' },
         ],
-        [{ _: 'keyboardButton', text: '6' }],
+        [{ type: 'disabled', text: '6' }],
       ],
     })
   })
@@ -149,47 +150,47 @@ describe('BotKeyboardBuilder', () => {
     const builder = new BotKeyboardBuilder(3)
 
     builder.row([
-      { _: 'keyboardButton', text: '1' },
-      { _: 'keyboardButton', text: '2' },
-      { _: 'keyboardButton', text: '3' },
-      { _: 'keyboardButton', text: '4' },
-      { _: 'keyboardButton', text: '5' },
+      { type: 'disabled', text: '1' },
+      { type: 'disabled', text: '2' },
+      { type: 'disabled', text: '3' },
+      { type: 'disabled', text: '4' },
+      { type: 'disabled', text: '5' },
     ])
-    builder.append({ _: 'keyboardButton', text: '6' })
+    builder.append({ type: 'disabled', text: '6' })
 
     expect(builder.asInline()).toEqual({
       type: 'inline',
       buttons: [
         [
-          { _: 'keyboardButton', text: '1' },
-          { _: 'keyboardButton', text: '2' },
-          { _: 'keyboardButton', text: '3' },
-          { _: 'keyboardButton', text: '4' },
-          { _: 'keyboardButton', text: '5' },
+          { type: 'disabled', text: '1' },
+          { type: 'disabled', text: '2' },
+          { type: 'disabled', text: '3' },
+          { type: 'disabled', text: '4' },
+          { type: 'disabled', text: '5' },
         ],
-        [{ _: 'keyboardButton', text: '6' }],
+        [{ type: 'disabled', text: '6' }],
       ],
     })
   })
 
   it('should support reply keyboards', () => {
-    const builder = new BotKeyboardBuilder(3)
+    const builder = new BotKeyboardBuilder<InputReplyKeyboardButton>(3)
 
-    builder.append({ _: 'keyboardButton', text: '1' })
-    builder.append({ _: 'keyboardButton', text: '2' })
-    builder.append({ _: 'keyboardButton', text: '3' })
-    builder.append({ _: 'keyboardButton', text: '4' })
+    builder.append({ type: 'text', text: '1' })
+    builder.append({ type: 'text', text: '2' })
+    builder.append({ type: 'text', text: '3' })
+    builder.append({ type: 'text', text: '4' })
 
     expect(builder.asReply({ resize: true })).toEqual({
       type: 'reply',
       resize: true,
       buttons: [
         [
-          { _: 'keyboardButton', text: '1' },
-          { _: 'keyboardButton', text: '2' },
-          { _: 'keyboardButton', text: '3' },
+          { type: 'text', text: '1' },
+          { type: 'text', text: '2' },
+          { type: 'text', text: '3' },
         ],
-        [{ _: 'keyboardButton', text: '4' }],
+        [{ type: 'text', text: '4' }],
       ],
     })
   })

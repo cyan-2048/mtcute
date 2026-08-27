@@ -29,6 +29,11 @@ export const WEBA_LAYER = 'https://raw.githubusercontent.com/Ajaxy/telegram-tt/m
 export const PRELUDE = '// This file is auto-generated. Do not edit.\n'
 export const makeTypedPrelude = (typesFile: string) => `/// <reference types="./${typesFile}" />\n${PRELUDE}`
 
+// constructors that no longer exist at the current layer, but that we still
+// want to keep in the schema (e.g. because we generate them ourselves for
+// backwards compatibility). everything else missing from the latest layer is dropped.
+export const LEGACY_CTORS_TO_KEEP: Set<string> = new Set(['inputPeerPhotoFileLocationLegacy', 'inputStickerSetThumbLegacy'])
+
 // these types and their descendants are supported for backward compatibility,
 // and will get included into compat.tl on schema bump
 export const TYPES_FOR_COMPAT: string[] = [

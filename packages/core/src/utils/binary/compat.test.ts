@@ -20,6 +20,54 @@ describe('binary/compat', () => {
     })
   })
 
+  it('should correctly read inline keyboard from layer 228', () => {
+    const data = hex.decode(
+      '5402a348' // replyInlineMarkup_layer228
+      + '15c4b51c01000000' // vector, 1 item
+      + '838b6077' // keyboardButtonRow
+      + '15c4b51c01000000' // vector, 1 item
+      + 'ec250cd8' // keyboardButtonUrl_layer228
+      + '00000000' // flags
+      + '01610000' // text = 'a'
+      + '01620000', // url = 'b'
+    )
+    expect(deserializeObjectWithCompat(data)).toEqual({
+      _: 'replyInlineMarkup',
+      rows: [
+        {
+          _: 'keyboardInlineButtonRow',
+          buttons: [
+            {
+              _: 'keyboardInlineButton',
+              text: 'a',
+              type: { _: 'inlineButtonTypeUrl', url: 'b' },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('should correctly read reply keyboard buttons from layer 228', () => {
+    const data = hex.decode(
+      '838b6077' // keyboardButtonRow
+      + '15c4b51c01000000' // vector, 1 item
+      + 'ff0c177d' // keyboardButton_layer228
+      + '00000000' // flags
+      + '01610000', // text = 'a'
+    )
+    expect(deserializeObjectWithCompat(data)).toEqual({
+      _: 'keyboardButtonRow',
+      buttons: [
+        {
+          _: 'keyboardButton',
+          text: 'a',
+          type: { _: 'buttonTypeDefault' },
+        },
+      ],
+    })
+  })
+
   it('should correctly read emojiStatus from 197 inside channelAdminLogEventActionChangeEmojiStatus', () => {
     // rather unlikely case where emojiStatus from different layers is inside the same object.
     // still useful to test it tho
